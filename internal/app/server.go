@@ -25,7 +25,7 @@ func PostMetrics(w http.ResponseWriter, r *http.Request) {
 	case "gauge":
 		valueM, err := strconv.ParseFloat(valueStrM, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		storage.StorageGause.Add(nameM, valueM)
@@ -33,7 +33,7 @@ func PostMetrics(w http.ResponseWriter, r *http.Request) {
 	case "counter":
 		valueM, err := strconv.ParseInt(valueStrM, 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		storage.StorageConter.Add(nameM, valueM)

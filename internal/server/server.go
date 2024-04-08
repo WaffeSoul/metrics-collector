@@ -1,6 +1,7 @@
-package app
+package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"

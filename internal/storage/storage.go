@@ -22,7 +22,7 @@ func Init() *Storage {
 }
 
 func (s *Storage) Delete(key string) {
-
+	delete(s.items, key)
 }
 
 func (s *Storage) Add(key string, value interface{}) {
@@ -33,8 +33,6 @@ func (s *Storage) Add(key string, value interface{}) {
 
 func (s *Storage) Get(key string) (interface{}, bool) {
 	item, found := s.items[key]
-
-	// ключ не найден
 	if !found {
 		return nil, false
 	}

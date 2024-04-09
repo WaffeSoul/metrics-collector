@@ -81,16 +81,16 @@ func (s *Collector) UpdateMetricToServer() {
 		for _, metric := range stringsMetric {
 			err := s.SendToServer(metric)
 			if err != nil {
-				return
+				continue
 			}
 		}
 		err := s.SendToServer(counterStr)
 		if err != nil {
-			return
+			continue
 		}
 		err = s.SendToServer(randomStr)
 		if err != nil {
-			return
+			continue
 		}
 		time.Sleep(time.Second * time.Duration(s.reportInterval))
 	}

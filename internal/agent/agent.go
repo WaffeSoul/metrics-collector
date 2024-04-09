@@ -60,13 +60,14 @@ func NewCollector(address string, pollInterval int64, reportInterval int64) *Col
 }
 
 func (s *Collector) SendToServer(data string) error {
-	postUrl := s.address + "/update/" + data
-	resp, err := http.Post(postUrl, "text/plain", nil)
+	postURL := s.address + "/update/" + data
+	resp, err := http.Post(postURL, "text/plain", nil)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error: status code %d", resp.StatusCode)
+		return fmt.Errorf("error: status code %d", resp.StatusCode)
 	}
 	return nil
 }

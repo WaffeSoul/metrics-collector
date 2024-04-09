@@ -22,7 +22,7 @@ func Init() *Storage {
 }
 
 func (s *Storage) Delete(key string) {
-
+	delete(s.items, key)
 }
 
 func (s *Storage) Add(key string, value interface{}) {

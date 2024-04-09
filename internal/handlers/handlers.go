@@ -1,7 +1,6 @@
-package server
+package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,18 +9,20 @@ import (
 )
 
 func PostMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	data := strings.Split(r.URL.Path, "/")
-	if len(data) != 5 {
+	if len(data) != 5 || len(data[3]) == 0 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	typeM := data[2]
 	nameM := data[3]
 	valueStrM := data[4]
+
 	switch typeM {
 	case "gauge":
 		valueM, err := strconv.ParseFloat(valueStrM, 64)

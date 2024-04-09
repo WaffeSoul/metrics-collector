@@ -11,7 +11,7 @@ func main() {
 	storage.StorageGause = storage.Init()
 	storage.StorageConter = storage.Init()
 	serve := handlers.InitMux()
-	err := http.ListenAndServe(`:8080`, serve)
+	err := http.ListenAndServe(`localhost:8080`, serve)
 	if err != nil {
 		panic(err)
 	}

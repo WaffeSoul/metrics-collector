@@ -104,8 +104,8 @@ func TestPostMetrics(t *testing.T) {
 	storage.StorageConter = storage.Init()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			paramUrl := "/update/" + test.args.typeMetric + "/" + test.args.name + "/" + test.args.value
-			request := httptest.NewRequest(http.MethodPost, paramUrl, nil)
+			paramURL := "/update/" + test.args.typeMetric + "/" + test.args.name + "/" + test.args.value
+			request := httptest.NewRequest(http.MethodPost, paramURL, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			PostMetrics(w, request)

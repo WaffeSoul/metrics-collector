@@ -78,7 +78,7 @@ func (s *Collector) UpdateMetricToServer() {
 		stringsMetric := s.fields.prepareSend()
 		counterStr := fmt.Sprintf("counter/PollCount/%d", s.counter)
 		randomStr := fmt.Sprintf("gauge/RandomValue/%f", rand.Float64())
-		s.mutex.Unlock()
+
 		for _, metric := range stringsMetric {
 			err := s.SendToServer(metric)
 			if err != nil {
@@ -93,6 +93,8 @@ func (s *Collector) UpdateMetricToServer() {
 		if err != nil {
 			continue
 		}
+		s.counter = 0
+		s.mutex.Unlock()
 		time.Sleep(time.Second * time.Duration(s.reportInterval))
 	}
 }

@@ -29,6 +29,10 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			valueOldM, ok := db.StorageConter.Get(nameM)
+			if ok {
+				valueM += valueOldM.Value.(int64)
+			}
 			db.StorageConter.Add(nameM, valueM)
 		default:
 			w.WriteHeader(http.StatusBadRequest)

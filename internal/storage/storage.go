@@ -47,8 +47,5 @@ func (s *Storage) Get(key string) (interface{}, bool) {
 }
 
 func (s *Storage) GetAll() map[string]Item {
-	for i, a := range s.items {
-		println(i, a.Value)
-	}
 	return s.items
 }

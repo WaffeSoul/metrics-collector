@@ -1,53 +1,84 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
+	"github.com/go-chi/chi/v5"
 )
 
-func PostMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	data := strings.Split(r.URL.Path, "/")
-	if len(data) != 5 || len(data[3]) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	typeM := data[2]
-	nameM := data[3]
-	valueStrM := data[4]
+func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		typeM := chi.URLParam(r, "type")
+		nameM := chi.URLParam(r, "name")
+		valueStrM := chi.URLParam(r, "value")
+		switch typeM {
+		case "gauge":
+			valueM, err := strconv.ParseFloat(valueStrM, 64)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			db.StorageGause.Add(nameM, valueM)
 
-	switch typeM {
-	case "gauge":
-		valueM, err := strconv.ParseFloat(valueStrM, 64)
-		if err != nil {
+		case "counter":
+			valueM, err := strconv.ParseInt(valueStrM, 10, 64)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			db.StorageConter.Add(nameM, valueM)
+		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		storage.StorageGause.Add(nameM, valueM)
 
-	case "counter":
-		valueM, err := strconv.ParseInt(valueStrM, 10, 64)
-		if err != nil {
+	}
+}
+func GetValue(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		typeM := chi.URLParam(r, "type")
+		nameM := chi.URLParam(r, "name")
+		switch typeM {
+		case "gauge":
+			valueM, err := db.StorageGause.Get(nameM)
+			if !err {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Add("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%v", valueM)))
+		case "counter":
+			valueM, err := db.StorageConter.Get(nameM)
+			if !err {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Add("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%v", valueM)))
+		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		storage.StorageConter.Add(nameM, valueM)
-	default:
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
+	}
 }
 
-func InitMux() (mux *http.ServeMux) {
-	mux = http.NewServeMux()
-	mux.HandleFunc("/update/", PostMetrics)
-	return
+func GetAll(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		data := db.StorageConter.GetAll()
+		for name, value := range data {
+			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
+		}
+		data = db.StorageGause.GetAll()
+		for name, value := range data {
+			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
+		}
+	}
 }

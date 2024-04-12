@@ -1,9 +1,9 @@
 package storage
 
-var (
+type MemStorage struct {
 	StorageGause  *Storage
 	StorageConter *Storage
-)
+}
 
 type Storage struct {
 	items map[string]Item
@@ -11,6 +11,13 @@ type Storage struct {
 
 type Item struct {
 	Value interface{}
+}
+
+func InitMem() *MemStorage {
+	var memStorage MemStorage
+	memStorage.StorageGause = Init()
+	memStorage.StorageConter = Init()
+	return &memStorage
 }
 
 func Init() *Storage {
@@ -36,5 +43,12 @@ func (s *Storage) Get(key string) (interface{}, bool) {
 	if !found {
 		return nil, false
 	}
-	return item, true
+	return item.Value, true
+}
+
+func (s *Storage) GetAll() map[string]Item {
+	for i, a := range s.items {
+		println(i, a.Value)
+	}
+	return s.items
 }

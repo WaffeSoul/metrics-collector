@@ -31,7 +31,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			}
 			valueOldM, ok := db.StorageConter.Get(nameM)
 			if ok {
-				valueM += valueOldM.Value.(int64)
+				valueM += valueOldM.(int64)
 			}
 			db.StorageConter.Add(nameM, valueM)
 		default:

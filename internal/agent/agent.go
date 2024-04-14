@@ -74,25 +74,34 @@ func (s *Collector) SendToServer(data string) error {
 
 func (s *Collector) UpdateMetricToServer() {
 	for {
+		var err error
 		s.mutex.Lock()
 		stringsMetric := s.fields.prepareSend()
 		counterStr := fmt.Sprintf("counter/PollCount/%d", s.counter)
 		randomStr := fmt.Sprintf("gauge/RandomValue/%f", rand.Float64())
-		s.mutex.Unlock()
+
 		for _, metric := range stringsMetric {
-			err := s.SendToServer(metric)
+			err = s.SendToServer(metric)
 			if err != nil {
-				continue
+				break
 			}
 		}
-		err := s.SendToServer(counterStr)
 		if err != nil {
+			s.mutex.Unlock()
+			continue
+		}
+		err = s.SendToServer(counterStr)
+		if err != nil {
+			s.mutex.Unlock()
 			continue
 		}
 		err = s.SendToServer(randomStr)
 		if err != nil {
+			s.mutex.Unlock()
 			continue
 		}
+		s.counter = 0
+		s.mutex.Unlock()
 		time.Sleep(time.Second * time.Duration(s.reportInterval))
 	}
 }

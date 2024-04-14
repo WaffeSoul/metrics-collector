@@ -5,15 +5,29 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/WaffeSoul/metrics-collector/internal/storage"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/WaffeSoul/metrics-collector/internal/storage"
 )
 
 func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
+		if typeM == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		nameM := chi.URLParam(r, "name")
+		if nameM == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		valueStrM := chi.URLParam(r, "value")
+		if nameM == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		switch typeM {
 		case "gauge":
 			valueM, err := strconv.ParseFloat(valueStrM, 64)
@@ -21,7 +35,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			db.StorageGause.Add(nameM, valueM)
+			db.StorageGauge.Add(nameM, valueM)
 
 		case "counter":
 			valueM, err := strconv.ParseInt(valueStrM, 10, 64)
@@ -29,11 +43,11 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			valueOldM, ok := db.StorageConter.Get(nameM)
+			valueOldM, ok := db.StorageCounter.Get(nameM)
 			if ok {
 				valueM += valueOldM.(int64)
 			}
-			db.StorageConter.Add(nameM, valueM)
+			db.StorageCounter.Add(nameM, valueM)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -43,25 +57,24 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 }
 func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		nameM := chi.URLParam(r, "name")
 		switch typeM {
 		case "gauge":
-			valueM, err := db.StorageGause.Get(nameM)
+			valueM, err := db.StorageGauge.Get(nameM)
 			if !err {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			w.Header().Add("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(fmt.Sprintf("%v", valueM)))
 		case "counter":
-			valueM, err := db.StorageConter.Get(nameM)
+			valueM, err := db.StorageCounter.Get(nameM)
 			if !err {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			w.Header().Add("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(fmt.Sprintf("%v", valueM)))
 		default:
@@ -76,11 +89,11 @@ func GetAll(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		data := db.StorageConter.GetAll()
+		data := db.StorageCounter.GetAll()
 		for name, value := range data {
 			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
 		}
-		data = db.StorageGause.GetAll()
+		data = db.StorageGauge.GetAll()
 		for name, value := range data {
 			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
 		}

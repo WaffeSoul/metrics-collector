@@ -1,8 +1,8 @@
 package storage
 
 type MemStorage struct {
-	StorageGause  *Storage
-	StorageConter *Storage
+	StorageGauge  *Storage
+	StorageCounter *Storage
 }
 
 type Storage struct {
@@ -15,8 +15,8 @@ type Item struct {
 
 func InitMem() *MemStorage {
 	var memStorage MemStorage
-	memStorage.StorageGause = Init()
-	memStorage.StorageConter = Init()
+	memStorage.StorageGauge = Init()
+	memStorage.StorageCounter = Init()
 	return &memStorage
 }
 

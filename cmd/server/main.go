@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -12,6 +13,7 @@ import (
 
 func main() {
 	parseFlags()
+	fmt.Println(addr)
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {

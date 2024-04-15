@@ -7,13 +7,13 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-type config struct {
-	reportInterval int64  `env:"REPORT_INTERVAL"`
-	pollInterval   int64  `env:"POLL_INTERVAL"`
-	addr           string `env:"ADDRESS"`
+type Config struct {
+	ReportInterval int64  `env:"REPORT_INTERVAL"`
+	PollInterval   int64  `env:"POLL_INTERVAL"`
+	Addr           string `env:"ADDRESS"`
 }
 
-var cfg config
+var cfg Config
 
 func parseFlags() {
 	var addr string
@@ -27,13 +27,13 @@ func parseFlags() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if cfg.addr == "" {
-		cfg.addr = addr
+	if cfg.Addr == "" {
+		cfg.Addr = addr
 	}
-	if cfg.reportInterval == 0 {
-		cfg.reportInterval = reportInterval
+	if cfg.ReportInterval == 0 {
+		cfg.ReportInterval = reportInterval
 	}
-	if cfg.pollInterval == 0 {
-		cfg.pollInterval = pollInterval
+	if cfg.PollInterval == 0 {
+		cfg.PollInterval = pollInterval
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 )
 
 var (
@@ -11,4 +12,8 @@ var (
 func parseFlags() {
 	flag.StringVar(&addr, "a", ":8080", "address and port to run server")
 	flag.Parse()
+
+	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
+		addr = envAddr
+	}
 }

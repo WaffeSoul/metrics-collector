@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	parseFlags()
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
@@ -19,6 +20,6 @@ func main() {
 		r.Get("/value/{type}/{name}", handlers.GetValue(db))
 	})
 
-	log.Fatal(http.ListenAndServe(`localhost:8080`, r))
+	log.Fatal(http.ListenAndServe(addr, r))
 
 }

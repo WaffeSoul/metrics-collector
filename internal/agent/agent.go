@@ -139,7 +139,7 @@ func (s *Collector) UpdateMetrict() {
 		s.fields.Sys = float64(m.Sys)
 		s.fields.TotalAlloc = float64(m.TotalAlloc)
 		s.counter += 1
-		s.mutex.Unlock()
+		
 		time.Sleep(time.Duration(s.pollInterval) * time.Second)
 	}
 }

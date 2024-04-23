@@ -52,9 +52,10 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
+		w.WriteHeader(http.StatusOK)
 	}
 }
+
 func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")

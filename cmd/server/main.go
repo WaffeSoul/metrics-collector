@@ -1,21 +1,23 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/WaffeSoul/metrics-collector/internal/handlers"
+	"github.com/WaffeSoul/metrics-collector/internal/logger"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 )
 
 func main() {
 	parseFlags()
-	fmt.Println(addr)
+	// logger.Initialize("info")
+	logger.Initialize()
 	db := storage.InitMem()
 	r := chi.NewRouter()
+	r.Use(logger.WithLogging)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))

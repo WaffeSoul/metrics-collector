@@ -8,7 +8,7 @@ import (
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func PostMetrics(db *storage.MemStorage) http.HandlerFunc {

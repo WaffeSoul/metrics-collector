@@ -91,6 +91,36 @@ func PostMetricsOLD(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
+func GetValueOLD(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
+		typeM := chi.URLParam(r, "type")
+		nameM := chi.URLParam(r, "name")
+		switch typeM {
+		case "gauge":
+			valueM, err := db.StorageGauge.Get(nameM)
+			if !err {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%v", valueM)))
+		case "counter":
+			valueM, err := db.StorageCounter.Get(nameM)
+			if !err {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%v", valueM)))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+	}
+}
+
 func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		headerContentType := r.Header.Get("Content-Type")

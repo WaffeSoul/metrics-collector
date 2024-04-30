@@ -38,7 +38,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-		case "text/plain":
+		default:
 			w.Header().Add("Content-Type", "text/plain")
 			typeM := chi.URLParam(r, "type")
 			if typeM == "" {

@@ -23,6 +23,7 @@ func main() {
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetricsOLD(db))
 		r.Post("/update", handlers.PostMetrics(db))
 		r.Post("/value", handlers.GetValue(db))
+		r.Get("/value/{type}/{name}", handlers.GetValueOLD(db))
 	})
 
 	log.Fatal(http.ListenAndServe(addr, r))

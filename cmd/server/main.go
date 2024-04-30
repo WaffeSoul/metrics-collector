@@ -20,6 +20,7 @@ func main() {
 	r.Use(logger.WithLogging)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
+		r.Post("/update/{type}/{name}/{value}", handlers.PostMetricsOLD(db))
 		r.Post("/update", handlers.PostMetrics(db))
 		r.Post("/value", handlers.GetValue(db))
 	})

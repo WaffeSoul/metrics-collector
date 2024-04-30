@@ -39,48 +39,55 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			}
 			w.WriteHeader(http.StatusOK)
 		default:
-			w.Header().Add("Content-Type", "text/plain")
-			typeM := chi.URLParam(r, "type")
-			if typeM == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			nameM := chi.URLParam(r, "name")
-			if nameM == "" {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			valueStrM := chi.URLParam(r, "value")
-			if nameM == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			switch typeM {
-			case "gauge":
-				valueM, err := strconv.ParseFloat(valueStrM, 64)
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-				db.StorageGauge.Add(nameM, valueM)
-
-			case "counter":
-				valueM, err := strconv.ParseInt(valueStrM, 10, 64)
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-				valueOldM, ok := db.StorageCounter.Get(nameM)
-				if ok {
-					valueM += valueOldM.(int64)
-				}
-				db.StorageCounter.Add(nameM, valueM)
-			default:
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
+	}
+}
+
+func PostMetricsOLD(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
+		typeM := chi.URLParam(r, "type")
+		if typeM == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		nameM := chi.URLParam(r, "name")
+		if nameM == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		valueStrM := chi.URLParam(r, "value")
+		if nameM == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		switch typeM {
+		case "gauge":
+			valueM, err := strconv.ParseFloat(valueStrM, 64)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			db.StorageGauge.Add(nameM, valueM)
+
+		case "counter":
+			valueM, err := strconv.ParseInt(valueStrM, 10, 64)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			valueOldM, ok := db.StorageCounter.Get(nameM)
+			if ok {
+				valueM += valueOldM.(int64)
+			}
+			db.StorageCounter.Add(nameM, valueM)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

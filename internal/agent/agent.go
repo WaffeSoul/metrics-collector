@@ -69,7 +69,7 @@ func (s *Collector) SendToServer(data model.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("error: json Marshal %e", err)
 	}
-	postURL := "http://" + s.address + "/update"
+	postURL := "http://" + s.address + "/update/"
 	resp, err := http.Post(postURL, "application/json", bytes.NewBuffer(dataBytes))
 	if err != nil {
 		return err
@@ -103,7 +103,9 @@ func (s *Collector) UpdateMetricToServer() {
 				break
 			}
 		}
-		s.counter = 0
+		if err == nil {
+			s.counter = 0
+		}
 		s.mutex.Unlock()
 		time.Sleep(time.Second * time.Duration(s.reportInterval))
 	}

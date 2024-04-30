@@ -13,7 +13,7 @@ import (
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 )
 
-func TestPostMetrics(t *testing.T) {
+func TestPostMetricsOLD(t *testing.T) {
 	type args struct {
 		typeMetric string
 		name       string
@@ -104,7 +104,7 @@ func TestPostMetrics(t *testing.T) {
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Post("/update/{type}/{name}/{value}", PostMetrics(db))
+		r.Post("/update/{type}/{name}/{value}", PostMetricsOLD(db))
 	})
 
 	ts := httptest.NewServer(r)

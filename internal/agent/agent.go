@@ -1,12 +1,17 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/WaffeSoul/metrics-collector/internal/model"
 )
 
 type Collector struct {
@@ -59,9 +64,13 @@ func NewCollector(address string, pollInterval int64, reportInterval int64) *Col
 	}
 }
 
-func (s *Collector) SendToServer(data string) error {
-	postURL := "http://" + s.address + "/update/" + data
-	resp, err := http.Post(postURL, "text/plain", nil)
+func (s *Collector) SendToServer(data model.Metrics) error {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("error: json Marshal %e", err)
+	}
+	postURL := "http://" + s.address + "/update/"
+	resp, err := http.Post(postURL, "application/json", bytes.NewBuffer(dataBytes))
 	if err != nil {
 		return err
 	}
@@ -76,31 +85,27 @@ func (s *Collector) UpdateMetricToServer() {
 	for {
 		var err error
 		s.mutex.Lock()
-		stringsMetric := s.fields.prepareSend()
-		counterStr := fmt.Sprintf("counter/PollCount/%d", s.counter)
-		randomStr := fmt.Sprintf("gauge/RandomValue/%f", rand.Float64())
-
-		for _, metric := range stringsMetric {
+		jsonMetric := s.fields.prepareSend()
+		jsonMetric = append(jsonMetric, model.Metrics{
+			ID:    "PollCount",
+			MType: "counter",
+			Delta: &s.counter,
+		})
+		tempRand := rand.Float64()
+		jsonMetric = append(jsonMetric, model.Metrics{
+			ID:    "RandomValue",
+			MType: "gauge",
+			Value: &tempRand,
+		})
+		for _, metric := range jsonMetric {
 			err = s.SendToServer(metric)
 			if err != nil {
 				break
 			}
 		}
-		if err != nil {
-			s.mutex.Unlock()
-			continue
+		if err == nil {
+			s.counter = 0
 		}
-		err = s.SendToServer(counterStr)
-		if err != nil {
-			s.mutex.Unlock()
-			continue
-		}
-		err = s.SendToServer(randomStr)
-		if err != nil {
-			s.mutex.Unlock()
-			continue
-		}
-		s.counter = 0
 		s.mutex.Unlock()
 		time.Sleep(time.Second * time.Duration(s.reportInterval))
 	}
@@ -144,33 +149,16 @@ func (s *Collector) UpdateMetrict() {
 	}
 }
 
-func (f *fields) prepareSend() (updates []string) {
-	updates = append(updates, fmt.Sprintf("gauge/Alloc/%f", f.Alloc))
-	updates = append(updates, fmt.Sprintf("gauge/BuckHashSys/%f", f.BuckHashSys))
-	updates = append(updates, fmt.Sprintf("gauge/Frees/%f", f.Frees))
-	updates = append(updates, fmt.Sprintf("gauge/GCCPUFraction/%f", f.GCCPUFraction))
-	updates = append(updates, fmt.Sprintf("gauge/GCSys/%f", f.GCSys))
-	updates = append(updates, fmt.Sprintf("gauge/HeapAlloc/%f", f.HeapAlloc))
-	updates = append(updates, fmt.Sprintf("gauge/HeapIdle/%f", f.HeapIdle))
-	updates = append(updates, fmt.Sprintf("gauge/HeapInuse/%f", f.HeapInuse))
-	updates = append(updates, fmt.Sprintf("gauge/HeapObjects/%f", f.HeapObjects))
-	updates = append(updates, fmt.Sprintf("gauge/HeapReleased/%f", f.HeapReleased))
-	updates = append(updates, fmt.Sprintf("gauge/HeapSys/%f", f.HeapSys))
-	updates = append(updates, fmt.Sprintf("gauge/LastGC/%f", f.LastGC))
-	updates = append(updates, fmt.Sprintf("gauge/Lookups/%f", f.Lookups))
-	updates = append(updates, fmt.Sprintf("gauge/MCacheInuse/%f", f.MCacheInuse))
-	updates = append(updates, fmt.Sprintf("gauge/MCacheSys/%f", f.MCacheSys))
-	updates = append(updates, fmt.Sprintf("gauge/MSpanInuse/%f", f.MSpanInuse))
-	updates = append(updates, fmt.Sprintf("gauge/MSpanSys/%f", f.MSpanSys))
-	updates = append(updates, fmt.Sprintf("gauge/Mallocs/%f", f.Mallocs))
-	updates = append(updates, fmt.Sprintf("gauge/NextGC/%f", f.NextGC))
-	updates = append(updates, fmt.Sprintf("gauge/NumForcedGC/%f", f.NumForcedGC))
-	updates = append(updates, fmt.Sprintf("gauge/NumGC/%f", f.NumGC))
-	updates = append(updates, fmt.Sprintf("gauge/OtherSys/%f", f.OtherSys))
-	updates = append(updates, fmt.Sprintf("gauge/PauseTotalNs/%f", f.PauseTotalNs))
-	updates = append(updates, fmt.Sprintf("gauge/StackInuse/%f", f.StackInuse))
-	updates = append(updates, fmt.Sprintf("gauge/StackSys/%f", f.StackSys))
-	updates = append(updates, fmt.Sprintf("gauge/Sys/%f", f.Sys))
-	updates = append(updates, fmt.Sprintf("gauge/TotalAlloc/%f", f.TotalAlloc))
+func (f fields) prepareSend() (updates []model.Metrics) {
+	values := reflect.ValueOf(f)
+	typesOf := values.Type()
+	for i := 0; i < values.NumField(); i++ {
+		temp := values.Field(i).Float()
+		updates = append(updates, model.Metrics{
+			ID:    typesOf.Field(i).Name,
+			MType: "gauge",
+			Value: &temp,
+		})
+	}
 	return
 }

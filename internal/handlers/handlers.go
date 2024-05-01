@@ -1,16 +1,64 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
+	"github.com/go-chi/chi/v5"
 )
 
 func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Header.Get("Content-Type") {
+		case "application/json":
+			w.Header().Add("Content-Type", "text/plain")
+			var resJSON model.Metrics
+			decoder := json.NewDecoder(r.Body)
+			err := decoder.Decode(&resJSON)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if len(resJSON.ID) == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			switch resJSON.MType {
+			case "gauge":
+				if resJSON.Value == nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				fmt.Println(*resJSON.Value)
+				db.StorageGauge.Add(resJSON.ID, *resJSON.Value)
+
+			case "counter":
+				if resJSON.Delta == nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				valueOldM, ok := db.StorageCounter.Get(resJSON.ID)
+				if ok {
+					*resJSON.Delta += valueOldM.(int64)
+				}
+				db.StorageCounter.Add(resJSON.ID, *resJSON.Delta)
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+}
+
+func PostMetricsOLD(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
@@ -56,7 +104,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func GetValue(db *storage.MemStorage) http.HandlerFunc {
+func GetValueOLD(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
@@ -83,6 +131,58 @@ func GetValue(db *storage.MemStorage) http.HandlerFunc {
 			return
 		}
 
+	}
+}
+
+func GetValue(db *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		headerContentType := r.Header.Get("Content-Type")
+		w.Header().Add("Content-Type", "application/json")
+		if headerContentType != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var resJSON model.Metrics
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&resJSON)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if len(resJSON.ID) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		switch resJSON.MType {
+		case "gauge":
+			valueM, ok := db.StorageGauge.Get(resJSON.ID)
+			if !ok {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			fmt.Println(valueM.(float64))
+			temp := valueM.(float64)
+			resJSON.Value = &temp
+		case "counter":
+			valueM, ok := db.StorageCounter.Get(resJSON.ID)
+			if !ok {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			temp := valueM.(int64)
+			resJSON.Delta = &temp
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		jsonResp, err := json.Marshal(resJSON)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResp)
 	}
 }
 

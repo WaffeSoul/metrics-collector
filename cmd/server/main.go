@@ -20,8 +20,11 @@ func main() {
 	r.Use(logger.WithLogging)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
-		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))
-		r.Get("/value/{type}/{name}", handlers.GetValue(db))
+		r.Post("/update/{type}/{name}/{value}", handlers.PostMetricsOLD(db))
+		r.Post("/update/", handlers.PostMetrics(db))
+		r.Get("/value/{type}/{name}", handlers.GetValueOLD(db))
+		r.Post("/value/", handlers.GetValue(db))
+
 	})
 
 	log.Fatal(http.ListenAndServe(addr, r))

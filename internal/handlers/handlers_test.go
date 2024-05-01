@@ -344,9 +344,8 @@ func TestGetValue(t *testing.T) {
 	}
 	db := storage.InitMem()
 	db.StorageGauge.Add("test", 123.5324523)
-	var temp int64
-	temp = 123
-	db.StorageCounter.Add("test", temp)
+	var test int64 = 123
+	db.StorageCounter.Add("test", test)
 	r := chi.NewRouter()
 	r.Post("/value/", GetValue(db))
 	ts := httptest.NewServer(r)

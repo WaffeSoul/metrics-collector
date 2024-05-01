@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,110 @@ import (
 
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 )
+
+func TestPostMetrics(t *testing.T) {
+	type args struct {
+		data        []byte
+		contentType string
+	}
+	type want struct {
+		code        int
+		contentType string
+	}
+	tests := []struct {
+		name string
+
+		args args
+		want want
+	}{
+		{
+			name: "positive test #1",
+			args: args{
+				data:        []byte("{\"id\": \"test\",\"type\": \"gauge\", \"value\": 123.5324523}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        200,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name: "negative test #2",
+			args: args{
+				data:        []byte("{\"id\": \"test\",\"type\": \"asdas\", \"value\": 123.5324523}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name: "negative test #3",
+			args: args{
+				data:        []byte("{\"type\": \"gauge\", \"value\": 123.5324523}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        404,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name: "negative test #4",
+			args: args{
+				data:        []byte("{\"id\": \"test\",\"type\": \"gauge\", \"value\": \"asdasda\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name: "negative test #5",
+			args: args{
+				data:        []byte("{\"id\": \"test\",\"type\": \"counter\", \"delta\": 123.5324523}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name: "positive test #6",
+			args: args{
+				data:        []byte("{\"id\": \"test\",\"type\": \"counter\", \"delta\": 1234123}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        200,
+				contentType: "text/plain",
+			},
+		},
+	}
+	db := storage.InitMem()
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Post("/update/", PostMetrics(db))
+	})
+
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			paramURL := "/update/"
+			w, err := http.Post(ts.URL+paramURL, "application/json", bytes.NewBuffer(test.args.data))
+			require.NoError(t, err)
+			assert.Equal(t, test.want.code, w.StatusCode)
+			defer w.Body.Close()
+			_, err = io.ReadAll(w.Body)
+			require.NoError(t, err)
+			assert.Equal(t, test.want.contentType, w.Header.Get("Content-Type"))
+		})
+	}
+}
 
 func TestPostMetricsOLD(t *testing.T) {
 	type args struct {
@@ -126,6 +231,142 @@ func TestPostMetricsOLD(t *testing.T) {
 }
 
 func TestGetValue(t *testing.T) {
+	type args struct {
+		data        []byte
+		contentType string
+	}
+	type want struct {
+		code        int
+		contentType string
+		body        []byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "positive test #1",
+			args: args{
+				data:        []byte("{\"id\":\"test\",\"type\":\"gauge\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        200,
+				contentType: "application/json",
+				body:        []byte("{\"id\":\"test\",\"type\":\"gauge\",\"value\":123.5324523}"),
+			},
+		},
+		{
+			name: "positive test #2",
+			args: args{
+				data:        []byte("{\"id\":\"test\",\"type\":\"counter\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        200,
+				contentType: "application/json",
+				body:        []byte("{\"id\":\"test\",\"type\":\"counter\",\"delta\":123}"),
+			},
+		},
+		{
+			name: "negative test #3",
+			args: args{
+				data:        []byte("{\"id\":\"test2\",\"type\":\"gauge\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        404,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+		{
+			name: "negative test #4",
+			args: args{
+				data:        []byte("{\"id\":\"test2\",\"type\":\"counter\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        404,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+		{
+			name: "negative test #5",
+			args: args{
+				data:        []byte("{\"id\":\"test\",\"type\":\"gaugeasd\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+		{
+			name: "negative test #6",
+			args: args{
+				data:        []byte("{\"type\":\"counter\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        404,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+		{
+			name: "negative test #7",
+			args: args{
+				data:        []byte("{\"id\":\"test\"}"),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+		{
+			name: "negative test #8",
+			args: args{
+				data:        []byte(""),
+				contentType: "application/json",
+			},
+			want: want{
+				code:        400,
+				contentType: "application/json",
+				body:        []byte(""),
+			},
+		},
+	}
+	db := storage.InitMem()
+	db.StorageGauge.Add("test", 123.5324523)
+	var temp int64
+	temp = 123
+	db.StorageCounter.Add("test", temp)
+	r := chi.NewRouter()
+	r.Post("/value/", GetValue(db))
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			paramURL := "/value/"
+			w, err := http.Post(ts.URL+paramURL, "application/json", bytes.NewBuffer(test.args.data))
+			require.NoError(t, err)
+			assert.Equal(t, test.want.code, w.StatusCode)
+			defer w.Body.Close()
+			body, err := io.ReadAll(w.Body)
+			require.NoError(t, err)
+			assert.Equal(t, test.want.contentType, w.Header.Get("Content-Type"))
+			assert.Equal(t, test.want.body, body)
+		})
+	}
+}
+
+func TestGetValueOLD(t *testing.T) {
 	type args struct {
 		typeMetric string
 		name       string

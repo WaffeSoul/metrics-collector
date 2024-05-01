@@ -15,6 +15,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
+			w.Header().Add("Content-Type", "text/plain")
 			var resJSON model.Metrics
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&resJSON)
@@ -22,12 +23,24 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			w.Header().Add("Content-Type", "text/plain")
+			if len(resJSON.ID) == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			switch resJSON.MType {
 			case "gauge":
-				db.StorageGauge.Add(resJSON.ID, resJSON.Value)
+				if resJSON.Value == nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				fmt.Println(*resJSON.Value)
+				db.StorageGauge.Add(resJSON.ID, *resJSON.Value)
 
 			case "counter":
+				if resJSON.Delta == nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
 				valueOldM, ok := db.StorageCounter.Get(resJSON.ID)
 				if ok {
 					*resJSON.Delta += valueOldM.(int64)
@@ -124,6 +137,7 @@ func GetValueOLD(db *storage.MemStorage) http.HandlerFunc {
 func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		headerContentType := r.Header.Get("Content-Type")
+		w.Header().Add("Content-Type", "application/json")
 		if headerContentType != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -135,6 +149,10 @@ func GetValue(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		if len(resJSON.ID) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		switch resJSON.MType {
 		case "gauge":
 			valueM, ok := db.StorageGauge.Get(resJSON.ID)
@@ -142,14 +160,17 @@ func GetValue(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			*resJSON.Value = valueM.(float64)
+			fmt.Println(valueM.(float64))
+			temp := valueM.(float64)
+			resJSON.Value = &temp
 		case "counter":
 			valueM, ok := db.StorageCounter.Get(resJSON.ID)
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			*resJSON.Delta = valueM.(int64)
+			temp := valueM.(int64)
+			resJSON.Delta = &temp
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -159,7 +180,7 @@ func GetValue(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.Header().Add("Content-Type", "application/json")
+
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResp)
 	}

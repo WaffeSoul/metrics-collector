@@ -18,12 +18,13 @@ func main() {
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
+	r.Use(handlers.MiddlewareGzip)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
-		r.Post("/update/{type}/{name}/{value}", handlers.PostMetricsOLD(db))
-		r.Post("/update/", handlers.PostMetrics(db))
-		r.Get("/value/{type}/{name}", handlers.GetValueOLD(db))
-		r.Post("/value/", handlers.GetValue(db))
+		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))
+		r.Post("/update/", handlers.PostMetricsJSON(db))
+		r.Get("/value/{type}/{name}", handlers.GetValue(db))
+		r.Post("/value/", handlers.GetValueJSON(db))
 
 	})
 

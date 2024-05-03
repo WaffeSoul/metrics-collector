@@ -1,17 +1,20 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 	"github.com/go-chi/chi/v5"
 )
 
-func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
+func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
@@ -33,7 +36,6 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				fmt.Println(*resJSON.Value)
 				db.StorageGauge.Add(resJSON.ID, *resJSON.Value)
 
 			case "counter":
@@ -58,7 +60,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func PostMetricsOLD(db *storage.MemStorage) http.HandlerFunc {
+func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
@@ -104,7 +106,7 @@ func PostMetricsOLD(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func GetValueOLD(db *storage.MemStorage) http.HandlerFunc {
+func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
@@ -134,7 +136,7 @@ func GetValueOLD(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func GetValue(db *storage.MemStorage) http.HandlerFunc {
+func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		headerContentType := r.Header.Get("Content-Type")
 		w.Header().Add("Content-Type", "application/json")
@@ -199,4 +201,36 @@ func GetAll(db *storage.MemStorage) http.HandlerFunc {
 			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
 		}
 	}
+}
+
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+	return w.Writer.Write(b)
+}
+
+func MiddlewareGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		gzWrite, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		gzRead, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		r.Body = gzRead
+		w.Header().Set("Accept-Encoding", "gzip")
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gzWrite}, r)
+	})
 }

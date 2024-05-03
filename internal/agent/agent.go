@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -70,9 +71,24 @@ func (s *Collector) SendToServer(data model.Metrics) error {
 		return fmt.Errorf("error: json Marshal %e", err)
 	}
 	postURL := "http://" + s.address + "/update/"
-	resp, err := http.Post(postURL, "application/json", bytes.NewBuffer(dataBytes))
+	var buf bytes.Buffer
+	g := gzip.NewWriter(&buf)
+	if _, err = g.Write(dataBytes); err != nil {
+		return fmt.Errorf("error: gzip compress %e", err)
+	}
+	if err = g.Close(); err != nil {
+		return fmt.Errorf("error: gzip compress %e", err)
+	}
+	newClient := &http.Client{}
+	req, err := http.NewRequest("POST", postURL, &buf)
 	if err != nil {
 		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := newClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error: send req %e", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {

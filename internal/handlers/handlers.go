@@ -24,6 +24,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&resJSON)
 			if err != nil {
+				fmt.Println(r.Body)
 				fmt.Println("error json")
 				w.WriteHeader(http.StatusBadRequest)
 				return

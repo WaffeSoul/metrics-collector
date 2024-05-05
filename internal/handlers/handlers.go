@@ -215,7 +215,9 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 
 func MiddlewareGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") && !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			fmt.Println("none gzip")
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -226,6 +228,7 @@ func MiddlewareGzip(next http.Handler) http.Handler {
 		}
 		gzRead, err := gzip.NewReader(r.Body)
 		if err != nil {
+			fmt.Println("none gzip error")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -219,17 +219,19 @@ func MiddlewareGzip(next http.Handler) http.Handler {
 			fmt.Println("none gzip")
 			next.ServeHTTP(w, r)
 			return
+		} else{
+
 		}
 
 		gzWrite, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
-			io.WriteString(w, err.Error())
+			next.ServeHTTP(w, r)
 			return
 		}
 		gzRead, err := gzip.NewReader(r.Body)
 		if err != nil {
 			fmt.Println("none gzip error")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			next.ServeHTTP(w, r)
 			return
 		}
 		r.Body = gzRead

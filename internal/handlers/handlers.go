@@ -196,9 +196,10 @@ func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
 
 func GetAll(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if "html/text" == r.Header.Get("Content-Type"){
+		acceptData := r.Header.Get("Accept")
+		if acceptData == "html/text" {
 			w.Header().Add("Content-Type", "text/html")
-		} else{
+		} else {
 			w.Header().Add("Content-Type", "text/plain")
 		}
 		w.WriteHeader(http.StatusOK)

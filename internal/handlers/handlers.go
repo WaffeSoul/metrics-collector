@@ -16,6 +16,7 @@ import (
 
 func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
 			w.Header().Add("Content-Type", "text/plain")
@@ -23,6 +24,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&resJSON)
 			if err != nil {
+				fmt.Println("error json")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -33,6 +35,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 			switch resJSON.MType {
 			case "gauge":
 				if resJSON.Value == nil {
+					fmt.Println("error value")
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
@@ -40,6 +43,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 
 			case "counter":
 				if resJSON.Delta == nil {
+					fmt.Println("error value")
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
@@ -62,6 +66,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 
 func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Old")
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		if typeM == "" {
@@ -216,13 +221,9 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 func MiddlewareGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			fmt.Println("none gzip")
 			next.ServeHTTP(w, r)
 			return
-		} else {
-			fmt.Println(r.Header.Get("Accept-Encoding"))
 		}
-
 		gzWrite, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
 			next.ServeHTTP(w, r)
@@ -230,7 +231,6 @@ func MiddlewareGzip(next http.Handler) http.Handler {
 		}
 		gzRead, err := gzip.NewReader(r.Body)
 		if err != nil {
-			fmt.Println("none gzip error")
 			next.ServeHTTP(w, r)
 			return
 		}

@@ -14,7 +14,7 @@ import (
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 )
 
-func TestPostMetrics(t *testing.T) {
+func TestPostMetricsJSON(t *testing.T) {
 	type args struct {
 		data        []byte
 		contentType string
@@ -99,7 +99,7 @@ func TestPostMetrics(t *testing.T) {
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Post("/update/", PostMetrics(db))
+		r.Post("/update/", PostMetricsJSON(db))
 	})
 
 	ts := httptest.NewServer(r)
@@ -118,7 +118,7 @@ func TestPostMetrics(t *testing.T) {
 	}
 }
 
-func TestPostMetricsOLD(t *testing.T) {
+func TestPostMetrics(t *testing.T) {
 	type args struct {
 		typeMetric string
 		name       string
@@ -209,7 +209,7 @@ func TestPostMetricsOLD(t *testing.T) {
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Post("/update/{type}/{name}/{value}", PostMetricsOLD(db))
+		r.Post("/update/{type}/{name}/{value}", PostMetrics(db))
 	})
 
 	ts := httptest.NewServer(r)
@@ -230,7 +230,7 @@ func TestPostMetricsOLD(t *testing.T) {
 	}
 }
 
-func TestGetValue(t *testing.T) {
+func TestGetValueJSON(t *testing.T) {
 	type args struct {
 		data        []byte
 		contentType string
@@ -347,7 +347,7 @@ func TestGetValue(t *testing.T) {
 	var test int64 = 123
 	db.StorageCounter.Add("test", test)
 	r := chi.NewRouter()
-	r.Post("/value/", GetValue(db))
+	r.Post("/value/", GetValueJSON(db))
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	for _, test := range tests {
@@ -365,7 +365,7 @@ func TestGetValue(t *testing.T) {
 	}
 }
 
-func TestGetValueOLD(t *testing.T) {
+func TestGetValue(t *testing.T) {
 	type args struct {
 		typeMetric string
 		name       string
@@ -481,7 +481,7 @@ func TestGetValueOLD(t *testing.T) {
 	db.StorageGauge.Add("test", 123.5324523)
 	db.StorageCounter.Add("test", 123)
 	r := chi.NewRouter()
-	r.Get("/value/{type}/{name}", GetValueOLD(db))
+	r.Get("/value/{type}/{name}", GetValue(db))
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	for _, test := range tests {

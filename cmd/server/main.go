@@ -18,7 +18,7 @@ func main() {
 	db := storage.InitMem()
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
-	// r.Use(handlers.MiddlewareGzip)
+	r.Use(handlers.GzipMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))

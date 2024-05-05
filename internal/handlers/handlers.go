@@ -209,34 +209,133 @@ func GetAll(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-type gzipWriter struct {
-	http.ResponseWriter
-	Writer io.Writer
+// type GzipWriter struct {
+// 	http.ResponseWriter
+// 	Writer io.Writer
+// }
+
+// func (w GzipWriter) Write(b []byte) (int, error) {
+// 	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+// 	return w.Writer.Write(b)
+// }
+
+// func MiddlewareGzip(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+// 			next.ServeHTTP(w, r)
+// 			return
+// 		}
+
+// 		// создаём gzip.Writer поверх текущего w
+// 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+// 		if err != nil {
+// 			io.WriteString(w, err.Error())
+// 			return
+// 		}
+// 		defer gz.Close()
+
+// 		w.Header().Set("Content-Encoding", "gzip")
+// 		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
+// 		next.ServeHTTP(GzipWriter{ResponseWriter: w, Writer: gz}, r)
+// 	})
+// }
+
+type compressWriter struct {
+	w  http.ResponseWriter
+	zw *gzip.Writer
 }
 
-func (w gzipWriter) Write(b []byte) (int, error) {
-	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
-	return w.Writer.Write(b)
+func newCompressWriter(w http.ResponseWriter) *compressWriter {
+	return &compressWriter{
+		w:  w,
+		zw: gzip.NewWriter(w),
+	}
 }
 
-func MiddlewareGzip(next http.Handler) http.Handler {
+func (c *compressWriter) Header() http.Header {
+	return c.w.Header()
+}
+
+func (c *compressWriter) Write(p []byte) (int, error) {
+	return c.zw.Write(p)
+}
+
+func (c *compressWriter) WriteHeader(statusCode int) {
+	if statusCode < 300 {
+		c.w.Header().Set("Content-Encoding", "gzip")
+	}
+	c.w.WriteHeader(statusCode)
+}
+
+// Close закрывает gzip.Writer и досылает все данные из буфера.
+func (c *compressWriter) Close() error {
+	return c.zw.Close()
+}
+
+// compressReader реализует интерфейс io.ReadCloser и позволяет прозрачно для сервера
+// декомпрессировать получаемые от клиента данные
+type compressReader struct {
+	r  io.ReadCloser
+	zr *gzip.Reader
+}
+
+func newCompressReader(r io.ReadCloser) (*compressReader, error) {
+	zr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &compressReader{
+		r:  r,
+		zr: zr,
+	}, nil
+}
+
+func (c compressReader) Read(p []byte) (n int, err error) {
+	return c.zr.Read(p)
+}
+
+func (c *compressReader) Close() error {
+	if err := c.r.Close(); err != nil {
+		return err
+	}
+	return c.zr.Close()
+}
+
+func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			next.ServeHTTP(w, r)
-			return
+		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+		// который будем передавать следующей функции
+		ow := w
+
+		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		if supportsGzip {
+			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+			cw := newCompressWriter(w)
+			// меняем оригинальный http.ResponseWriter на новый
+			ow = cw
+			// не забываем отправить клиенту все сжатые данные после завершения middleware
+			defer cw.Close()
 		}
-		gzWrite, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-		if err != nil {
-			next.ServeHTTP(w, r)
-			return
+
+		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		if sendsGzip {
+			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+			cr, err := newCompressReader(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			// меняем тело запроса на новое
+			r.Body = cr
+			defer cr.Close()
 		}
-		gzRead, err := gzip.NewReader(r.Body)
-		if err != nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-		r.Body = gzRead
-		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gzWrite}, r)
+
+		// передаём управление хендлеру
+		next.ServeHTTP(ow, r)
 	})
 }

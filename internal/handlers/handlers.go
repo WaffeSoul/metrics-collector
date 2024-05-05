@@ -233,7 +233,6 @@ func MiddlewareGzip(next http.Handler) http.Handler {
 			return
 		}
 		r.Body = gzRead
-		w.Header().Set("Accept-Encoding", "gzip")
 		w.Header().Set("Content-Encoding", "gzip")
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gzWrite}, r)
 	})

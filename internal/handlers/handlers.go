@@ -19,7 +19,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
-			w.Header().Add("Content-Type", "text/plain; text/html")
+			w.Header().Add("Content-Type", "text/plain")
 			var resJSON model.Metrics
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&resJSON)
@@ -68,7 +68,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Old")
-		w.Header().Add("Content-Type", "text/plain; text/html")
+		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		if typeM == "" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -114,7 +114,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 
 func GetValue(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/plain; text/html")
+		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		nameM := chi.URLParam(r, "name")
 		switch typeM {
@@ -196,7 +196,11 @@ func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
 
 func GetAll(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/plain; text/html")
+		if "html/text" == r.Header.Get("Content-Type"){
+			w.Header().Add("Content-Type", "text/html")
+		} else{
+			w.Header().Add("Content-Type", "text/plain")
+		}
 		w.WriteHeader(http.StatusOK)
 		data := db.StorageCounter.GetAll()
 		for name, value := range data {

@@ -219,8 +219,8 @@ func MiddlewareGzip(next http.Handler) http.Handler {
 			fmt.Println("none gzip")
 			next.ServeHTTP(w, r)
 			return
-		} else{
-
+		} else {
+			fmt.Println(r.Header.Get("Accept-Encoding"))
 		}
 
 		gzWrite, err := gzip.NewWriterLevel(w, gzip.BestSpeed)

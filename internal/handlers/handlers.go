@@ -57,12 +57,13 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			db.SaveStorage()
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		db.SaveStorage()
+
 	}
 }
 
@@ -104,13 +105,14 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			if ok {
 				valueM += valueOldM.(int64)
 			}
+
 			db.StorageCounter.Add(nameM, valueM)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
 		db.SaveStorage()
+		w.WriteHeader(http.StatusOK)
 
 	}
 }

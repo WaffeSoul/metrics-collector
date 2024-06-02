@@ -30,7 +30,7 @@ func InitMem(interlval int, path string) *MemStorage {
 	memStorage.StorageCounter = Init()
 	memStorage.InterlvalSave = interlval
 	memStorage.PathFile = path
-	memStorage.LastSave = time.Now()
+	memStorage.LastSave = time.Time{}
 	return &memStorage
 }
 

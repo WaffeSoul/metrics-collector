@@ -15,7 +15,7 @@ var (
 )
 
 func parseFlags() {
-	flag.StringVar(&addr, "a", "192.168.50.30:8080", "address and port to run server")
+	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 	flag.IntVar(&storeInterval, "i", 300, "interval save store")
 	flag.StringVar(&fileStoragePath, "f", "/tmp/metrics-db.json", "path file storage")

@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 )
@@ -64,19 +65,9 @@ func (s *Storage) GetAll() map[string]Item {
 }
 
 func (m *MemStorage) SaveStorage() {
+	fmt.Println(m.LastSave)
 	if m.LastSave.Add(time.Duration(m.InterlvalSave)*time.Second).Before(time.Now()) || m.InterlvalSave == 0 {
-
 		m.LastSave = time.Now()
-		file, err := os.OpenFile(m.PathFile, os.O_CREATE|os.O_WRONLY, 0666)
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		var temp []byte
-		_, err = file.Read(temp)
-		if err != nil {
-			return
-		}
 		preData := map[string]interface{}{
 			"gauge":   m.StorageGauge.items,
 			"counter": m.StorageCounter.items,
@@ -85,7 +76,11 @@ func (m *MemStorage) SaveStorage() {
 		if err != nil {
 			panic(err)
 		}
-		file.Write(data)
+		fmt.Println(string(data))
+		err = os.WriteFile(m.PathFile, data, 0644)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }

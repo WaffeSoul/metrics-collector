@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 
@@ -19,7 +22,17 @@ func main() {
 	if true {
 		db.LoadStorage()
 	}
-	defer db.SaveStorage()
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	go func() {
+		<-sigChan
+		db.SaveStorage()
+		os.Exit(1)
+	}()
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)

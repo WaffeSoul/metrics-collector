@@ -3,7 +3,6 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 )
@@ -98,11 +97,17 @@ func (m *MemStorage) LoadStorage() {
 	if err != nil {
 		return
 	}
-	fmt.Println(file)
 	data := map[string]map[string]Item{}
 	if err := json.Unmarshal(file, &data); err != nil {
 		panic(err)
 	}
 	m.StorageGauge.items = data["gauge"]
 	m.StorageCounter.items = data["counter"]
+	for i := range m.StorageCounter.items {
+		temp := data["counter"][i].Value.(float64)
+		m.StorageCounter.items[i] = Item{
+			Value: int64(temp),
+		}
+
+	}
 }

@@ -15,7 +15,10 @@ func main() {
 	parseFlags()
 	// logger.Initialize("info")
 	logger.Initialize()
-	db := storage.InitMem()
+	db := storage.InitMem(storeInterval, fileStoragePath)
+	if true {
+		db.LoadStorage()
+	}
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)
@@ -27,7 +30,6 @@ func main() {
 		r.Post("/value/", handlers.GetValueJSON(db))
 
 	})
-
 	log.Fatal(http.ListenAndServe(addr, r))
 
 }

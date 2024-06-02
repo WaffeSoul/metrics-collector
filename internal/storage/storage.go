@@ -64,29 +64,30 @@ func (s *Storage) GetAll() map[string]Item {
 }
 
 func (m *MemStorage) SaveStorage() {
-	if m.LastSave.Add(time.Duration(m.InterlvalSave)*time.Second).After(time.Now()) || m.InterlvalSave == 0 {
-		return
+	if m.LastSave.Add(time.Duration(m.InterlvalSave)*time.Second).Before(time.Now()) || m.InterlvalSave == 0 {
+
+		m.LastSave = time.Now()
+		file, err := os.OpenFile(m.PathFile, os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		var temp []byte
+		_, err = file.Read(temp)
+		if err != nil {
+			return
+		}
+		preData := map[string]interface{}{
+			"gauge":   m.StorageGauge.items,
+			"counter": m.StorageCounter.items,
+		}
+		data, err := json.MarshalIndent(preData, "", "    ")
+		if err != nil {
+			panic(err)
+		}
+		file.Write(data)
 	}
-	m.LastSave = time.Now()
-	file, err := os.OpenFile(m.PathFile, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	var temp []byte
-	_, err = file.Read(temp)
-	if err != nil {
-		return
-	}
-	preData := map[string]interface{}{
-		"gauge":   m.StorageGauge.items,
-		"counter": m.StorageCounter.items,
-	}
-	data, err := json.MarshalIndent(preData, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-	file.Write(data)
+
 }
 
 func (m *MemStorage) LoadStorage() {

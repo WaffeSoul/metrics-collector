@@ -33,6 +33,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
+			fmt.Println(resJSON)
 			switch resJSON.MType {
 			case "gauge":
 				if resJSON.Value == nil {

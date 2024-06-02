@@ -19,6 +19,7 @@ func main() {
 	if true {
 		db.LoadStorage()
 	}
+	defer db.SaveStorage()
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)

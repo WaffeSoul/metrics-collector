@@ -65,22 +65,20 @@ func (s *Storage) GetAll() map[string]Item {
 }
 
 func (m *MemStorage) SaveStorage() {
-	fmt.Println(m.LastSave)
-	if m.LastSave.Add(time.Duration(m.InterlvalSave)*time.Second).Before(time.Now()) || m.InterlvalSave == 0 {
-		m.LastSave = time.Now()
-		preData := map[string]interface{}{
-			"gauge":   m.StorageGauge.items,
-			"counter": m.StorageCounter.items,
-		}
-		data, err := json.MarshalIndent(preData, "", "    ")
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(string(data))
-		err = os.WriteFile(m.PathFile, data, 0644)
-		if err != nil {
-			panic(err)
-		}
+
+	m.LastSave = time.Now()
+	preData := map[string]interface{}{
+		"gauge":   m.StorageGauge.items,
+		"counter": m.StorageCounter.items,
+	}
+	data, err := json.MarshalIndent(preData, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(data))
+	err = os.WriteFile(m.PathFile, data, 0644)
+	if err != nil {
+		panic(err)
 	}
 
 }

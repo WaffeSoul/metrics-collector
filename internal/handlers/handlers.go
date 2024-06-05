@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
@@ -59,7 +58,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			if db.LastSave.Add(time.Duration(db.InterlvalSave)*time.Second).Before(time.Now()) || db.InterlvalSave == 0 {
+			if db.InterlvalSave == 0 {
 				db.SaveStorage()
 			}
 			w.WriteHeader(http.StatusOK)
@@ -115,7 +114,7 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if db.LastSave.Add(time.Duration(db.InterlvalSave)*time.Second).Before(time.Now()) || db.InterlvalSave == 0 {
+		if db.InterlvalSave == 0 {
 			db.SaveStorage()
 		}
 		w.WriteHeader(http.StatusOK)

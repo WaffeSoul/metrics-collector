@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -12,11 +13,11 @@ type MemStorage struct {
 	StorageGauge   *Storage
 	StorageCounter *Storage
 	InterlvalSave  int
-	LastSave       time.Time
 	PathFile       string
 }
 
 type Storage struct {
+	mutex sync.Mutex
 	items map[string]Item
 }
 
@@ -30,29 +31,35 @@ func InitMem(interlval int, path string) *MemStorage {
 	memStorage.StorageCounter = Init()
 	memStorage.InterlvalSave = interlval
 	memStorage.PathFile = path
-	memStorage.LastSave = time.Time{}
 	return &memStorage
 }
 
 func Init() *Storage {
 	items := make(map[string]Item)
 	return &Storage{
+		mutex: sync.Mutex{},
 		items: items,
 	}
 
 }
 
 func (s *Storage) Delete(key string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	delete(s.items, key)
 }
 
 func (s *Storage) Add(key string, value interface{}) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.items[key] = Item{
 		Value: value,
 	}
 }
 
 func (s *Storage) Get(key string) (interface{}, bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	item, found := s.items[key]
 	if !found {
 		return nil, false
@@ -61,39 +68,54 @@ func (s *Storage) Get(key string) (interface{}, bool) {
 }
 
 func (s *Storage) GetAll() map[string]Item {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	return s.items
 }
 
-func (m *MemStorage) SaveStorage() {
+func (m *MemStorage) AutoSaveStorage() {
+	for {
+		time.Sleep(time.Duration(m.InterlvalSave) * time.Second)
+		m.SaveStorage() // add error handler
+	}
 
-	m.LastSave = time.Now()
+}
+
+func (m *MemStorage) SaveStorage() error {
+	fmt.Println("test")
+	if m.PathFile == "" {
+		return nil
+	}
+	m.StorageGauge.mutex.Lock()
+	m.StorageCounter.mutex.Lock()
+	defer m.StorageGauge.mutex.Unlock()
+	defer m.StorageCounter.mutex.Unlock()
 	preData := map[string]interface{}{
 		"gauge":   m.StorageGauge.items,
 		"counter": m.StorageCounter.items,
 	}
 	data, err := json.MarshalIndent(preData, "", "    ")
 	if err != nil {
-		panic(err)
+		return err
 	}
-	fmt.Println(string(data))
 	err = os.WriteFile(m.PathFile, data, 0644)
 	if err != nil {
-		panic(err)
+		return err
 	}
-
+	return nil
 }
 
-func (m *MemStorage) LoadStorage() {
+func (m *MemStorage) LoadStorage() error {
 	if _, err := os.Stat(m.PathFile); errors.Is(err, os.ErrNotExist) {
-		return
+		return err
 	}
 	file, err := os.ReadFile(m.PathFile)
 	if err != nil {
-		return
+		return err
 	}
 	data := map[string]map[string]Item{}
 	if err := json.Unmarshal(file, &data); err != nil {
-		panic(err)
+		return err
 	}
 	m.StorageGauge.items = data["gauge"]
 	m.StorageCounter.items = data["counter"]
@@ -104,4 +126,5 @@ func (m *MemStorage) LoadStorage() {
 		}
 
 	}
+	return nil
 }

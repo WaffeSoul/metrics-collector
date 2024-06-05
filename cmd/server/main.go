@@ -16,23 +16,23 @@ import (
 
 func main() {
 	parseFlags()
-	// logger.Initialize("info")
 	logger.Initialize()
 	db := storage.InitMem(storeInterval, fileStoragePath)
 	if true {
 		db.LoadStorage()
 	}
+	// Пока так лучше способа не нашел
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
 		db.SaveStorage()
-		os.Exit(1)
+		os.Exit(0)
 	}()
+	if db.InterlvalSave > 0 {
+		go db.AutoSaveStorage()
+	}
+
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)

@@ -3,7 +3,6 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -70,7 +69,11 @@ func (s *Storage) Get(key string) (interface{}, bool) {
 func (s *Storage) GetAll() map[string]Item {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.items
+	tempItems := make(map[string]Item, len(s.items))
+	for key, val := range s.items {
+		tempItems[key] = val
+	}
+	return tempItems
 }
 
 func (m *MemStorage) AutoSaveStorage() {
@@ -82,7 +85,6 @@ func (m *MemStorage) AutoSaveStorage() {
 }
 
 func (m *MemStorage) SaveStorage() error {
-	fmt.Println("test")
 	if m.PathFile == "" {
 		return nil
 	}

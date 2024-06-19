@@ -42,9 +42,10 @@ func InitMem(interlval int, path string, addrDB string) *MemStorage {
 }
 
 func InitDB(addr string) (*sql.DB, error) {
+	fmt.Println(addr)
 	data := strings.Split(addr, ":")
 	if len(data) != 2 {
-		return nil, fmt.Errorf("Error: invalid addr db string")
+		return nil, fmt.Errorf("error: invalid addr db string")
 	}
 	ps := fmt.Sprintf("host=%s port=%s",
 		data[0], data[1])

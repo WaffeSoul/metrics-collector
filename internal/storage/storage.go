@@ -1,14 +1,19 @@
 package storage
 
 import (
+	"context"
+
 	"encoding/json"
 	"errors"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type MemStorage struct {
+	TestDB         *pgx.Conn
 	StorageGauge   *Storage
 	StorageCounter *Storage
 	InterlvalSave  int
@@ -24,13 +29,46 @@ type Item struct {
 	Value interface{}
 }
 
-func InitMem(interlval int, path string) *MemStorage {
+func InitMem(interlval int, path string, addrDB string) *MemStorage {
 	var memStorage MemStorage
 	memStorage.StorageGauge = Init()
 	memStorage.StorageCounter = Init()
 	memStorage.InterlvalSave = interlval
 	memStorage.PathFile = path
+	memStorage.TestDB, _ = InitDB(addrDB)
 	return &memStorage
+}
+
+func InitDB(addr string) (*pgx.Conn, error) {
+	conn, err := pgx.Connect(context.Background(), addr)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+	// fmt.Println(addr)
+	// data := strings.Split(addr, ":")
+	// if len(data) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// ip := data[0]
+	// if len(strings.Split(data[1], "/")) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// port := strings.Split(data[1], "/")[0]
+	// if len(strings.Split(strings.Split(data[1], "/")[0], "?")) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// dbname := strings.Split(strings.Split(data[1], "/")[0], "?")[0]
+	// sslmode := strings.Split(strings.Split(data[1], "/")[0], "?sslmode=")[1]
+
+	// ps := fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s",
+	// 	ip, port, dbname, sslmode)
+
+	// db, err := sql.Open("pgx", ps)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return db, nil
 }
 
 func Init() *Storage {

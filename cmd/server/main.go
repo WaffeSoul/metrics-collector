@@ -17,7 +17,7 @@ import (
 func main() {
 	parseFlags()
 	logger.Initialize()
-	db := storage.InitMem(storeInterval, fileStoragePath)
+	db := storage.InitMem(storeInterval, fileStoragePath, addrDB)
 	if true {
 		db.LoadStorage()
 	}
@@ -40,6 +40,7 @@ func main() {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))
 		r.Post("/update/", handlers.PostMetricsJSON(db))
+		r.Get("/ping", handlers.PingDB(db))
 		r.Get("/value/{type}/{name}", handlers.GetValue(db))
 		r.Post("/value/", handlers.GetValueJSON(db))
 

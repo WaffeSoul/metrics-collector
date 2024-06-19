@@ -223,13 +223,17 @@ func GetAll(db *storage.MemStorage) http.HandlerFunc {
 
 func PingDB(db *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := db.TestDB.Ping()
-		fmt.Println(err)
-		if err != nil {
+		if db.TestDB == nil {
 			w.WriteHeader(http.StatusInternalServerError)
-
 		} else {
-			w.WriteHeader(http.StatusOK)
+			err := db.TestDB.Ping()
+			fmt.Println(err)
+			if err != nil {
+
+			} else {
+				w.WriteHeader(http.StatusOK)
+			}
 		}
+
 	}
 }

@@ -47,8 +47,19 @@ func InitDB(addr string) (*sql.DB, error) {
 	if len(data) != 2 {
 		return nil, fmt.Errorf("error: invalid addr db string")
 	}
-	ps := fmt.Sprintf("host=%s port=%s",
-		data[0], data[1])
+	ip := data[0]
+	if len(strings.Split(data[1], "/")) != 2 {
+		return nil, fmt.Errorf("error: invalid addr db string")
+	}
+	port := strings.Split(data[1], "/")[0]
+	if len(strings.Split(strings.Split(data[1], "/")[0], "?")) != 2 {
+		return nil, fmt.Errorf("error: invalid addr db string")
+	}
+	dbname := strings.Split(strings.Split(data[1], "/")[0], "?")[0]
+	sslmode := strings.Split(strings.Split(data[1], "/")[0], "?sslmode=")[1]
+
+	ps := fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s",
+		ip, port, dbname, sslmode)
 
 	db, err := sql.Open("pgx", ps)
 	if err != nil {

@@ -1,14 +1,21 @@
 package storage
 
 import (
+	"database/sql"
+	"fmt"
+	"strings"
+
 	"encoding/json"
 	"errors"
 	"os"
 	"sync"
 	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type MemStorage struct {
+	TestDB         *sql.DB
 	StorageGauge   *Storage
 	StorageCounter *Storage
 	InterlvalSave  int
@@ -24,13 +31,29 @@ type Item struct {
 	Value interface{}
 }
 
-func InitMem(interlval int, path string) *MemStorage {
+func InitMem(interlval int, path string, addrDB string) *MemStorage {
 	var memStorage MemStorage
 	memStorage.StorageGauge = Init()
 	memStorage.StorageCounter = Init()
 	memStorage.InterlvalSave = interlval
 	memStorage.PathFile = path
+	memStorage.TestDB, _ = InitDB(addrDB)
 	return &memStorage
+}
+
+func InitDB(addr string) (*sql.DB, error) {
+	data := strings.Split(addr, ":")
+	if len(data) != 2 {
+		return nil, fmt.Errorf("Error: invalid addr db string")
+	}
+	ps := fmt.Sprintf("host=%s port=%s",
+		data[0], data[1])
+
+	db, err := sql.Open("pgx", ps)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 func Init() *Storage {

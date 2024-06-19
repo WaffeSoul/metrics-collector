@@ -1,9 +1,7 @@
 package storage
 
 import (
-	"database/sql"
-	"fmt"
-	"strings"
+	"context"
 
 	"encoding/json"
 	"errors"
@@ -11,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5"
 )
 
 type MemStorage struct {
-	TestDB         *sql.DB
+	TestDB         *pgx.Conn
 	StorageGauge   *Storage
 	StorageCounter *Storage
 	InterlvalSave  int
@@ -41,31 +39,36 @@ func InitMem(interlval int, path string, addrDB string) *MemStorage {
 	return &memStorage
 }
 
-func InitDB(addr string) (*sql.DB, error) {
-	fmt.Println(addr)
-	data := strings.Split(addr, ":")
-	if len(data) != 2 {
-		return nil, fmt.Errorf("error: invalid addr db string")
-	}
-	ip := data[0]
-	if len(strings.Split(data[1], "/")) != 2 {
-		return nil, fmt.Errorf("error: invalid addr db string")
-	}
-	port := strings.Split(data[1], "/")[0]
-	if len(strings.Split(strings.Split(data[1], "/")[0], "?")) != 2 {
-		return nil, fmt.Errorf("error: invalid addr db string")
-	}
-	dbname := strings.Split(strings.Split(data[1], "/")[0], "?")[0]
-	sslmode := strings.Split(strings.Split(data[1], "/")[0], "?sslmode=")[1]
-
-	ps := fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s",
-		ip, port, dbname, sslmode)
-
-	db, err := sql.Open("pgx", ps)
+func InitDB(addr string) (*pgx.Conn, error) {
+	conn, err := pgx.Connect(context.Background(), addr)
 	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	return conn, nil
+	// fmt.Println(addr)
+	// data := strings.Split(addr, ":")
+	// if len(data) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// ip := data[0]
+	// if len(strings.Split(data[1], "/")) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// port := strings.Split(data[1], "/")[0]
+	// if len(strings.Split(strings.Split(data[1], "/")[0], "?")) != 2 {
+	// 	return nil, fmt.Errorf("error: invalid addr db string")
+	// }
+	// dbname := strings.Split(strings.Split(data[1], "/")[0], "?")[0]
+	// sslmode := strings.Split(strings.Split(data[1], "/")[0], "?sslmode=")[1]
+
+	// ps := fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s",
+	// 	ip, port, dbname, sslmode)
+
+	// db, err := sql.Open("pgx", ps)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return db, nil
 }
 
 func Init() *Storage {

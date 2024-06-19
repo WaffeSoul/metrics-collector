@@ -226,7 +226,7 @@ func PingDB(db *storage.MemStorage) http.HandlerFunc {
 		if db.TestDB == nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
-			err := db.TestDB.Ping()
+			err := db.TestDB.Ping(r.Context())
 			fmt.Println(err)
 			if err != nil {
 

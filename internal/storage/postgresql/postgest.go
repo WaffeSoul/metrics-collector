@@ -21,6 +21,7 @@ func NewRepository(addressDB string) *Repository {
 func InitDB(addr string) *pgxpool.Pool {
 	poolConfig, err := pgxpool.ParseConfig(addr)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 		// log.Fatalln("Unable to parse DATABASE_URL:", err)
 	}

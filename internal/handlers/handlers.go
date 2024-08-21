@@ -144,17 +144,12 @@ func GetAll(db *storage.Database) http.HandlerFunc {
 
 func PingDB(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if db.TestDB == nil {
-			w.WriteHeader(http.StatusInternalServerError)
+		err := db.DB.Ping()
+		fmt.Println(err)
+		if err != nil {
 		} else {
-			err := db.TestDB.Ping(r.Context())
-			fmt.Println(err)
-			if err != nil {
-
-			} else {
-				w.WriteHeader(http.StatusOK)
-			}
+			w.WriteHeader(http.StatusOK)
 		}
-
 	}
+
 }

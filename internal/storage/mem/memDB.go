@@ -30,73 +30,78 @@ func InitMem(interlval int, path string) *Repository {
 	return &memStorage
 }
 
-func (s *Repository) Delete(typeMetric string, key string) error {
+func (m *Repository) Delete(typeMetric string, key string) error {
 	switch typeMetric {
 	case "gauge":
-		s.StorageGauge.Delete(key)
+		m.StorageGauge.Delete(key)
 	case "counter":
-		s.StorageCounter.Delete(key)
+		m.StorageCounter.Delete(key)
 	default:
 		return errors.New("type metric error")
 	}
 	return nil
 }
 
-func (s *Repository) Add(typeMetric string, key string, value string) error {
+func (m *Repository) Add(typeMetric string, key string, value string) error {
 	switch typeMetric {
 	case "gauge":
 		valueFloat, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return err
 		}
-		s.StorageGauge.Add(key, valueFloat)
+		m.StorageGauge.Add(key, valueFloat)
 
 	case "counter":
 		valueInt, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
-		valueOldM, ok := s.StorageCounter.Get(key)
+		valueOldM, ok := m.StorageCounter.Get(key)
 		if ok {
 			valueInt += valueOldM.(int64)
 		}
 
-		s.StorageCounter.Add(key, valueInt)
+		m.StorageCounter.Add(key, valueInt)
 	default:
 		return errors.New("type metric error")
 	}
-	if s.InterlvalSave == 0 {
-		s.SaveStorage()
+	if m.InterlvalSave == 0 {
+		m.SaveStorage()
 	}
 	return nil
 }
 
-func (s *Repository) AddJSON(data model.Metrics) error {
+func (m *Repository) AddJSON(data model.Metrics) error {
 	switch data.MType {
 	case "gauge":
-		s.StorageGauge.Add(data.ID, *data.Value)
+		m.StorageGauge.Add(data.ID, *data.Value)
 	case "counter":
-		s.StorageCounter.Add(data.ID, *data.Delta)
+		oldValue, ok := m.StorageCounter.Get(data.ID)
+		if ok {
+			temp := oldValue.(int64)
+			*data.Delta = temp + *data.Delta
+		}
+		m.StorageCounter.Add(data.ID, *data.Delta)
 	default:
 		return errors.New("type metric error")
 	}
-	if s.InterlvalSave == 0 {
-		s.SaveStorage()
+	if m.InterlvalSave == 0 {
+		m.SaveStorage()
 	}
 	return nil
 }
 
-func (s *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
+func (m *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	switch data.MType {
 	case "gauge":
-		valueM, ok := s.StorageGauge.Get(data.ID)
+		valueM, ok := m.StorageGauge.Get(data.ID)
 		if !ok {
 			return data, errors.New("NotFound")
 		}
 		temp := valueM.(float64)
 		data.Value = &temp
 	case "counter":
-		valueM, ok := s.StorageCounter.Get(data.ID)
+		valueM, ok := m.StorageCounter.Get(data.ID)
 		if !ok {
 			return data, errors.New("NotFound")
 		}
@@ -108,17 +113,17 @@ func (s *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	return data, nil
 }
 
-func (s *Repository) Get(typeMetric string, key string) (interface{}, error) {
+func (m *Repository) Get(typeMetric string, key string) (interface{}, error) {
 	switch typeMetric {
 	case "gauge":
-		valueM, err := s.StorageGauge.Get(key)
+		valueM, err := m.StorageGauge.Get(key)
 		if !err {
 			return nil, errors.New("NotFound")
 		}
 		return valueM, nil
 
 	case "counter":
-		valueM, err := s.StorageCounter.Get(key)
+		valueM, err := m.StorageCounter.Get(key)
 		if !err {
 			return nil, errors.New("NotFound")
 		}
@@ -128,13 +133,13 @@ func (s *Repository) Get(typeMetric string, key string) (interface{}, error) {
 	}
 }
 
-func (s *Repository) GetAll() []byte {
+func (m *Repository) GetAll() []byte {
 	resultData := []byte{}
-	data := s.StorageCounter.GetAll()
+	data := m.StorageCounter.GetAll()
 	for name, value := range data {
 		resultData = append(resultData, []byte(fmt.Sprintf("%v: %v\n", name, value.Value))...)
 	}
-	data = s.StorageGauge.GetAll()
+	data = m.StorageGauge.GetAll()
 	for name, value := range data {
 		resultData = append(resultData, []byte(fmt.Sprintf("%v: %v\n", name, value.Value))...)
 	}

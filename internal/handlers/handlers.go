@@ -92,6 +92,7 @@ func GetValue(db *storage.Database) http.HandlerFunc {
 
 func GetValueJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("New")
 		headerContentType := r.Header.Get("Content-Type")
 		w.Header().Add("Content-Type", "application/json")
 		if headerContentType != "application/json" {

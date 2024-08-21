@@ -25,7 +25,6 @@ func main() {
 		log.Fatal(err)
 	}
 	go db.DB.AutoSaveStorage()
-	// Пока так лучше способа не нашел
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)
@@ -33,7 +32,7 @@ func main() {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))
 		r.Post("/update/", handlers.PostMetricsJSON(db))
-		// r.Get("/ping", handlers.PingDB(db))
+		r.Get("/ping", handlers.PingDB(db))
 		r.Get("/value/{type}/{name}", handlers.GetValue(db))
 		r.Post("/value/", handlers.GetValueJSON(db))
 

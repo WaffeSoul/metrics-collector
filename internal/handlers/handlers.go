@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
 	"github.com/go-chi/chi/v5"
 )
 
-func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
+func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
@@ -30,33 +29,10 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			fmt.Println(resJSON)
-			switch resJSON.MType {
-			case "gauge":
-				if resJSON.Value == nil {
-					fmt.Println("error value")
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-				db.StorageGauge.Add(resJSON.ID, *resJSON.Value)
-
-			case "counter":
-				if resJSON.Delta == nil {
-					fmt.Println("error value")
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-				valueOldM, ok := db.StorageCounter.Get(resJSON.ID)
-				if ok {
-					*resJSON.Delta += valueOldM.(int64)
-				}
-				db.StorageCounter.Add(resJSON.ID, *resJSON.Delta)
-			default:
+			err = db.DB.AddJSON(resJSON)
+			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
-			}
-			if db.InterlvalSave == 0 {
-				db.SaveStorage()
 			}
 			w.WriteHeader(http.StatusOK)
 		default:
@@ -67,7 +43,7 @@ func PostMetricsJSON(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
+func PostMetrics(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Old")
 		w.Header().Add("Content-Type", "text/plain")
@@ -86,71 +62,37 @@ func PostMetrics(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		switch typeM {
-		case "gauge":
-			valueM, err := strconv.ParseFloat(valueStrM, 64)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			db.StorageGauge.Add(nameM, valueM)
-
-		case "counter":
-			valueM, err := strconv.ParseInt(valueStrM, 10, 64)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			valueOldM, ok := db.StorageCounter.Get(nameM)
-			if ok {
-				valueM += valueOldM.(int64)
-			}
-
-			db.StorageCounter.Add(nameM, valueM)
-		default:
+		err := db.DB.Add(typeM, nameM, valueStrM)
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
-		}
-		if db.InterlvalSave == 0 {
-			db.SaveStorage()
 		}
 		w.WriteHeader(http.StatusOK)
 
 	}
 }
 
-func GetValue(db *storage.MemStorage) http.HandlerFunc {
+func GetValue(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		nameM := chi.URLParam(r, "name")
-		switch typeM {
-		case "gauge":
-			valueM, err := db.StorageGauge.Get(nameM)
-			if !err {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(fmt.Sprintf("%v", valueM)))
-		case "counter":
-			valueM, err := db.StorageCounter.Get(nameM)
-			if !err {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(fmt.Sprintf("%v", valueM)))
-		default:
+		valueM, err := db.DB.Get(typeM, nameM)
+		if err != nil && err.Error() == "NotFound" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(fmt.Sprintf("%v", valueM)))
 	}
 }
 
-func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
+func GetValueJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("New")
 		headerContentType := r.Header.Get("Content-Type")
 		w.Header().Add("Content-Type", "application/json")
 		if headerContentType != "application/json" {
@@ -168,25 +110,11 @@ func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		switch resJSON.MType {
-		case "gauge":
-			valueM, ok := db.StorageGauge.Get(resJSON.ID)
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Println(valueM.(float64))
-			temp := valueM.(float64)
-			resJSON.Value = &temp
-		case "counter":
-			valueM, ok := db.StorageCounter.Get(resJSON.ID)
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			temp := valueM.(int64)
-			resJSON.Delta = &temp
-		default:
+		resJSON, err = db.DB.GetJSON(resJSON)
+		if err != nil && err.Error() == "NotFound" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -201,7 +129,7 @@ func GetValueJSON(db *storage.MemStorage) http.HandlerFunc {
 	}
 }
 
-func GetAll(db *storage.MemStorage) http.HandlerFunc {
+func GetAll(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		acceptData := r.Header.Get("Accept")
 		if acceptData == "html/text" {
@@ -210,30 +138,20 @@ func GetAll(db *storage.MemStorage) http.HandlerFunc {
 			w.Header().Add("Content-Type", "text/plain")
 		}
 		w.WriteHeader(http.StatusOK)
-		data := db.StorageCounter.GetAll()
-		for name, value := range data {
-			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
-		}
-		data = db.StorageGauge.GetAll()
-		for name, value := range data {
-			w.Write([]byte(fmt.Sprintf("%v: %v\n", name, value.Value)))
-		}
+		data := db.DB.GetAll()
+		w.Write(data)
 	}
 }
 
-func PingDB(db *storage.MemStorage) http.HandlerFunc {
+func PingDB(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if db.TestDB == nil {
+		err := db.DB.Ping()
+		if err != nil {
+			fmt.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
-			err := db.TestDB.Ping(r.Context())
-			fmt.Println(err)
-			if err != nil {
-
-			} else {
-				w.WriteHeader(http.StatusOK)
-			}
+			w.WriteHeader(http.StatusOK)
 		}
-
 	}
+
 }

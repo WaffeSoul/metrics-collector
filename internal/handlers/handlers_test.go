@@ -96,7 +96,7 @@ func TestPostMetricsJSON(t *testing.T) {
 			},
 		},
 	}
-	db := storage.InitMem(0, "test.txt", "localhost:5432")
+	db, _ := storage.New("mem", 10, "test.txt", "")
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Post("/update/", PostMetricsJSON(db))
@@ -206,7 +206,7 @@ func TestPostMetrics(t *testing.T) {
 			},
 		},
 	}
-	db := storage.InitMem(0, "test.txt", "localhost:5432")
+	db, _ := storage.New("mem", 10, "test.txt", "")
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Post("/update/{type}/{name}/{value}", PostMetrics(db))
@@ -342,10 +342,9 @@ func TestGetValueJSON(t *testing.T) {
 			},
 		},
 	}
-	db := storage.InitMem(0, "test.txt", "localhost:5432")
-	db.StorageGauge.Add("test", 123.5324523)
-	var test int64 = 123
-	db.StorageCounter.Add("test", test)
+	db, _ := storage.New("mem", 10, "test.txt", "")
+	db.DB.Add("gauge", "test", "123.5324523")
+	db.DB.Add("counter", "test", "123")
 	r := chi.NewRouter()
 	r.Post("/value/", GetValueJSON(db))
 	ts := httptest.NewServer(r)
@@ -477,9 +476,9 @@ func TestGetValue(t *testing.T) {
 			},
 		},
 	}
-	db := storage.InitMem(0, "test.txt", "localhost:5432")
-	db.StorageGauge.Add("test", 123.5324523)
-	db.StorageCounter.Add("test", 123)
+	db, _ := storage.New("mem", 10, "test.txt", "")
+	db.DB.Add("gauge", "test", "123.5324523")
+	db.DB.Add("counter", "test", "123")
 	r := chi.NewRouter()
 	r.Get("/value/{type}/{name}", GetValue(db))
 	ts := httptest.NewServer(r)
@@ -520,9 +519,9 @@ func TestGetAll(t *testing.T) {
 			},
 		},
 	}
-	db := storage.InitMem(0, "test.txt", "localhost:5432")
-	db.StorageGauge.Add("test", 123.5324523)
-	db.StorageCounter.Add("test", 123)
+	db, _ := storage.New("mem", 10, "test.txt", "")
+	db.DB.Add("gauge", "test", "123.5324523")
+	db.DB.Add("counter", "test", "123")
 	r := chi.NewRouter()
 	r.Get("/", GetAll(db))
 	ts := httptest.NewServer(r)

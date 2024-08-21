@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
@@ -30,7 +31,8 @@ func InitDB(addr string) *pgxpool.Pool {
 	// defer conn.Close()
 	err = migrateTables(conn)
 	if err != nil {
-		return nil
+		fmt.Println(err)
+		return conn
 	}
 	return conn
 }
@@ -95,7 +97,7 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 	return errors.New("NotFound")
 }
 
-func (p *Repository) AddJSON(data model.Metrics) error{
+func (p *Repository) AddJSON(data model.Metrics) error {
 	conn, err := p.db.Acquire(context.Background())
 	if err != nil {
 		return err
@@ -126,7 +128,7 @@ func (p *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	defer conn.Release()
 	switch data.MType {
 	case "gauge":
-	err := conn.QueryRow(context.Background(), "select * from gauges where name=$1", data.ID).Scan(data.Value)
+		err := conn.QueryRow(context.Background(), "select * from gauges where name=$1", data.ID).Scan(data.Value)
 		if err != nil {
 			return data, errors.New("NotFound")
 		}

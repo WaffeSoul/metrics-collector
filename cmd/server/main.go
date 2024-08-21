@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -19,9 +20,10 @@ func main() {
 	if addrDB == "" {
 		db, err = storage.New("mem", storeInterval, fileStoragePath, "")
 	} else {
+		fmt.Println(addrDB)
 		db, err = storage.New("postgresql", 0, "", addrDB)
 	}
-	if err != nil {
+	if err != nil || db == nil {
 		log.Fatal(err)
 	}
 	go db.DB.AutoSaveStorage()

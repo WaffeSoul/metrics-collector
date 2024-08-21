@@ -177,5 +177,8 @@ func (p *Repository) AutoSaveStorage() {
 }
 
 func (p *Repository) Ping() error {
+	if p.db == nil {
+		return errors.New("db is nil")
+	}
 	return p.db.Ping(context.Background())
 }

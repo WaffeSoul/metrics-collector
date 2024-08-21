@@ -15,7 +15,7 @@ type Repository struct {
 }
 
 func NewRepository(addressDB string) *Repository {
-	return &Repository{db: InitDB("addressDB")}
+	return &Repository{db: InitDB(addressDB)}
 }
 
 func InitDB(addr string) *pgxpool.Pool {

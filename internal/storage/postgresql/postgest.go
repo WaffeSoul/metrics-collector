@@ -167,13 +167,13 @@ func (p *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	defer conn.Release()
 	switch data.MType {
 	case "gauge":
-		err := conn.QueryRow(context.Background(), "select value from gauges where name=$1", data.ID).Scan(data.Value)
+		err := conn.QueryRow(context.Background(), "select value from gauges where name=$1", data.ID).Scan(&data.Value)
 		if err != nil {
 			return data, errors.New("NotFound")
 		}
 		return data, nil
 	case "counter":
-		err := conn.QueryRow(context.Background(), "select value from counters where name=$1", data.ID).Scan(data.Delta)
+		err := conn.QueryRow(context.Background(), "select value from counters where name=$1", data.ID).Scan(&data.Delta)
 		if err != nil {
 			return data, errors.New("NotFound")
 		}

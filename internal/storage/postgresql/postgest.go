@@ -147,6 +147,7 @@ func (p *Repository) AddMuiltJSON(data []model.Metrics) error {
 			batch.Queue(`insert into gauges(name, value) values ($1, $2)
 			on conflict (name) do update set value=$2`, i.ID, i.Value)
 		case "counter":
+			fmt.Println(*i.Delta)
 			batch.Queue(`insert into counters(name, value) values ($1, $2)
 			on conflict (name) do update set value = counters.value + $2`, i.ID, i.Delta)
 		}

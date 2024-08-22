@@ -131,7 +131,6 @@ func (p *Repository) AddJSON(data model.Metrics) error {
 	default:
 		return errors.New("NotFound")
 	}
-	fmt.Println("ale")
 	return errors.New("NotFound")
 }
 

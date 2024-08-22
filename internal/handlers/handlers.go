@@ -100,6 +100,7 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 			return
 		}
 		var resJSON model.Metrics
+		fmt.Println(r.Body)
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&resJSON)
 		if err != nil {
@@ -137,6 +138,7 @@ func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 			w.Header().Add("Content-Type", "text/plain")
 			var resJSON []model.Metrics
 			decoder := json.NewDecoder(r.Body)
+			fmt.Println(r.Body)
 			err := decoder.Decode(&resJSON)
 			if err != nil {
 				fmt.Println(r.Body)
@@ -144,6 +146,7 @@ func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			fmt.Println(resJSON)
 			err = db.DB.AddMuiltJSON(resJSON)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)

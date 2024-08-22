@@ -152,8 +152,9 @@ func (p *Repository) AddMuiltJSON(data []model.Metrics) error {
 		}
 	}
 	br := conn.SendBatch(context.Background(), batch)
-	if br.Close() != nil {
-		return errors.New("NotFound")
+	err = br.Close()
+	if err != nil {
+		return err
 	}
 	return nil
 }

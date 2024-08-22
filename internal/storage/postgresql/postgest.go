@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -132,6 +133,30 @@ func (p *Repository) AddJSON(data model.Metrics) error {
 	}
 	fmt.Println("ale")
 	return errors.New("NotFound")
+}
+
+func (p *Repository) AddMuiltJSON(data []model.Metrics) error {
+	conn, err := p.db.Acquire(context.Background())
+	if err != nil {
+		return err
+	}
+	batch := &pgx.Batch{}
+	defer conn.Release()
+	for _, i := range data {
+		switch i.MType {
+		case "gauge":
+			batch.Queue(`insert into gauges(name, value) values ($1, $2)
+			on conflict (name) do update set value=$2`, i.ID, i.Value)
+		case "counter":
+			batch.Queue(`insert into counters(name, value) values ($1, $2)
+			on conflict (name) do update set value = counters.value + $2`, i.ID, i.Delta)
+		}
+	}
+	br := conn.SendBatch(context.Background(), batch)
+	if br.Close() != nil {
+		return errors.New("NotFound")
+	}
+	return nil
 }
 
 func (p *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {

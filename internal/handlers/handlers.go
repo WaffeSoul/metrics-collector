@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
+func PostMetricJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
@@ -43,7 +43,7 @@ func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 	}
 }
 
-func PostMetrics(db *storage.Database) http.HandlerFunc {
+func PostMetric(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Old")
 		w.Header().Add("Content-Type", "text/plain")
@@ -126,6 +126,35 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResp)
+	}
+}
+
+func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("New")
+		switch r.Header.Get("Content-Type") {
+		case "application/json":
+			w.Header().Add("Content-Type", "text/plain")
+			var resJSON []model.Metrics
+			decoder := json.NewDecoder(r.Body)
+			err := decoder.Decode(&resJSON)
+			if err != nil {
+				fmt.Println(r.Body)
+				fmt.Println("error json")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			err = db.DB.AddMuiltJSON(resJSON)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 	}
 }
 

@@ -99,7 +99,7 @@ func TestPostMetricsJSON(t *testing.T) {
 	db, _ := storage.New("mem", 10, "test.txt", "")
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Post("/update/", PostMetricsJSON(db))
+		r.Post("/update/", PostMetricJSON(db))
 	})
 
 	ts := httptest.NewServer(r)
@@ -209,7 +209,7 @@ func TestPostMetrics(t *testing.T) {
 	db, _ := storage.New("mem", 10, "test.txt", "")
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Post("/update/{type}/{name}/{value}", PostMetrics(db))
+		r.Post("/update/{type}/{name}/{value}", PostMetric(db))
 	})
 
 	ts := httptest.NewServer(r)

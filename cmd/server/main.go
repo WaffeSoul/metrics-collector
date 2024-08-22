@@ -32,8 +32,9 @@ func main() {
 	r.Use(handlers.GzipMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
-		r.Post("/update/{type}/{name}/{value}", handlers.PostMetrics(db))
-		r.Post("/update/", handlers.PostMetricsJSON(db))
+		r.Post("/update/{type}/{name}/{value}", handlers.PostMetric(db))
+		r.Post("/update/", handlers.PostMetricJSON(db))
+		r.Post("/updates/", handlers.PostMetricsJSON(db))
 		r.Get("/ping", handlers.PingDB(db))
 		r.Get("/value/{type}/{name}", handlers.GetValue(db))
 		r.Post("/value/", handlers.GetValueJSON(db))

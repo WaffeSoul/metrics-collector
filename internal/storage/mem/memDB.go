@@ -90,6 +90,18 @@ func (m *Repository) AddJSON(data model.Metrics) error {
 	}
 	return nil
 }
+func (m *Repository) AddMuiltJSON(data []model.Metrics) error {
+	for _, value := range data {
+		err := m.AddJSON(value)
+		if err != nil {
+			return err
+		}
+	}
+	if m.InterlvalSave == 0 {
+		m.SaveStorage()
+	}
+	return nil
+}
 
 func (m *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	switch data.MType {

@@ -57,7 +57,7 @@ func migrateTables(pool *pgxpool.Pool) error {
 	);
 	CREATE TABLE IF NOT EXISTS counters (
 		name VARCHAR(255) PRIMARY KEY,
-		value INTEGER
+		value bigint
 	);`)
 	fmt.Println("Alee")
 	return err

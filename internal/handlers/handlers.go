@@ -149,6 +149,7 @@ func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 			fmt.Println(resJSON)
 			err = db.DB.AddMuiltJSON(resJSON)
 			if err != nil {
+				fmt.Print(err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}

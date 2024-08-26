@@ -12,7 +12,6 @@ import (
 	"github.com/WaffeSoul/metrics-collector/pkg/constant"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -53,12 +52,8 @@ func retryConnect(pool *pgxpool.Pool) (conn *pgxpool.Conn, err error) {
 			if i == 3 {
 				return nil, errors.Join(errNoConnect, err)
 			}
-			var pgErr *pgconn.PgError
 			if strings.Contains(err.Error(), "failed to connect") {
 				fmt.Println("connect refused")
-			} else if errors.As(err, pgErr) {
-				fmt.Println(pgErr.Message) // => syntax error at end of input
-				fmt.Println(pgErr.Code)    // => 42601
 			} else {
 				fmt.Println(err)
 			}

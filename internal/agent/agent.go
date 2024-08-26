@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -13,6 +14,11 @@ import (
 	"time"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
+	"github.com/WaffeSoul/metrics-collector/pkg/constant"
+)
+
+var (
+	errorNoConnect = errors.New("sendToServer: no connect to server")
 )
 
 type Collector struct {
@@ -65,54 +71,22 @@ func NewCollector(address string, pollInterval int64, reportInterval int64) *Col
 	}
 }
 
-// func (s *Collector) SendToServer(data model.Metrics) error {
-// 	dataBytes, err := json.Marshal(data)
-// 	if err != nil {
-// 		return fmt.Errorf("error: json Marshal %e", err)
-// 	}
-// 	postURL := "http://" + s.address + "/update/"
-// 	var buf bytes.Buffer
-// 	g := gzip.NewWriter(&buf)
-// 	if _, err = g.Write(dataBytes); err != nil {
-// 		return fmt.Errorf("error: gzip compress %e", err)
-// 	}
-// 	if err = g.Close(); err != nil {
-// 		return fmt.Errorf("error: gzip compress %e", err)
-// 	}
-// 	newClient := &http.Client{}
-// 	req, err := http.NewRequest("POST", postURL, &buf)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Content-Encoding", "gzip")
-// 	resp, err := newClient.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf("error: send req %e", err)
-// 	}
-// 	defer resp.Body.Close()
-// 	if resp.StatusCode != 200 {
-// 		return fmt.Errorf("error: status code %d", resp.StatusCode)
-// 	}
-// 	return nil
-// }
-
 func (s *Collector) SendToServer(data []model.Metrics) error {
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("error: json Marshal %e", err)
+		return fmt.Errorf("json Marshal %e", err)
 	}
 	if dataBytes == nil {
-		return fmt.Errorf("error: data is nil")
+		return fmt.Errorf("data is nil")
 	}
 	postURL := "http://" + s.address + "/updates/"
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if _, err = g.Write(dataBytes); err != nil {
-		return fmt.Errorf("error: gzip compress %e", err)
+		return fmt.Errorf("gzip compress %e", err)
 	}
 	if err = g.Close(); err != nil {
-		return fmt.Errorf("error: gzip compress %e", err)
+		return fmt.Errorf("gzip compress %e", err)
 	}
 	newClient := &http.Client{}
 	req, err := http.NewRequest("POST", postURL, &buf)
@@ -121,20 +95,29 @@ func (s *Collector) SendToServer(data []model.Metrics) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	resp, err := newClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("error: send req %e", err)
+	var resp *http.Response
+	for i := 0; i < 4; i++ {
+		resp, err = newClient.Do(req)
+		if err != nil {
+			if i == 3 {
+				err = errors.Join(err, errorNoConnect)
+				return err
+			}
+			fmt.Printf("error: connection refused %e\n", err)
+			time.Sleep(time.Duration(constant.RetriTimmer[i]) * time.Second)
+		} else {
+			break
+		}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("error: status code %d", resp.StatusCode)
+		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 	return nil
 }
 
 func (s *Collector) UpdateMetricToServer() {
 	for {
-		fmt.Println("send")
 		var err error
 		s.mutex.Lock()
 		jsonMetric := s.fields.prepareSend()

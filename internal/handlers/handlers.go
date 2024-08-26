@@ -12,7 +12,6 @@ import (
 
 func PostMetricJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
 			w.Header().Add("Content-Type", "text/plain")
@@ -20,8 +19,6 @@ func PostMetricJSON(db *storage.Database) http.HandlerFunc {
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&resJSON)
 			if err != nil {
-				fmt.Println(r.Body)
-				fmt.Println("error json")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -45,7 +42,6 @@ func PostMetricJSON(db *storage.Database) http.HandlerFunc {
 
 func PostMetric(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Old")
 		w.Header().Add("Content-Type", "text/plain")
 		typeM := chi.URLParam(r, "type")
 		if typeM == "" {
@@ -92,7 +88,6 @@ func GetValue(db *storage.Database) http.HandlerFunc {
 
 func GetValueJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("New")
 		headerContentType := r.Header.Get("Content-Type")
 		w.Header().Add("Content-Type", "application/json")
 		if headerContentType != "application/json" {
@@ -100,7 +95,6 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 			return
 		}
 		var resJSON model.Metrics
-		fmt.Println(r.Body)
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&resJSON)
 		if err != nil {
@@ -132,24 +126,18 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 
 func PostMetricsJSON(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("New")
 		switch r.Header.Get("Content-Type") {
 		case "application/json":
 			w.Header().Add("Content-Type", "text/plain")
 			var resJSON []model.Metrics
 			decoder := json.NewDecoder(r.Body)
-			fmt.Println(r.Body)
 			err := decoder.Decode(&resJSON)
 			if err != nil {
-				fmt.Println(r.Body)
-				fmt.Println("error json")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			fmt.Println(resJSON)
 			err = db.DB.AddMuiltJSON(resJSON)
 			if err != nil {
-				fmt.Print(err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -180,7 +168,6 @@ func PingDB(db *storage.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := db.DB.Ping()
 		if err != nil {
-			fmt.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)

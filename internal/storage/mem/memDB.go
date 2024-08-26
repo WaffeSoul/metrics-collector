@@ -90,6 +90,18 @@ func (m *Repository) AddJSON(data model.Metrics) error {
 	}
 	return nil
 }
+func (m *Repository) AddMuiltJSON(data []model.Metrics) error {
+	for _, value := range data {
+		err := m.AddJSON(value)
+		if err != nil {
+			return err
+		}
+	}
+	if m.InterlvalSave == 0 {
+		m.SaveStorage()
+	}
+	return nil
+}
 
 func (m *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 	switch data.MType {
@@ -147,13 +159,10 @@ func (m *Repository) GetAll() []byte {
 }
 
 func (m *Repository) AutoSaveStorage() {
-	fmt.Print("Ale")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		fmt.Print("Ale")
 		<-sigChan
-		fmt.Print("Ale")
 		m.SaveStorage()
 		os.Exit(0)
 	}()

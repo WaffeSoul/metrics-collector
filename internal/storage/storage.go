@@ -29,6 +29,7 @@ type Store interface {
 	Delete(typeMetric string, key string) error
 	Add(typeMetric string, key string, value string) error
 	AddJSON(data model.Metrics) error
+	AddMuiltJSON(data []model.Metrics) error
 	Get(typeMetric string, key string) (interface{}, error)
 	GetJSON(data model.Metrics) (model.Metrics, error)
 	GetAll() []byte

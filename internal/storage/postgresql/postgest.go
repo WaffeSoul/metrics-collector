@@ -5,9 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
+	"github.com/WaffeSoul/metrics-collector/pkg/constant"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	errNoConnect = errors.New("no connect")
 )
 
 type Repository struct {
@@ -19,46 +28,58 @@ func NewRepository(addressDB string) *Repository {
 }
 
 func InitDB(addr string) *pgxpool.Pool {
-	fmt.Println("Alee")
 	poolConfig, err := pgxpool.ParseConfig(addr)
 	if err != nil {
-		fmt.Println(err)
 		return nil
 		// log.Fatalln("Unable to parse DATABASE_URL:", err)
 	}
-	fmt.Println("Alee")
 	conn, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		return nil
 	}
-	fmt.Println("Alee")
 	// defer conn.Close()
 	err = migrateTables(conn)
 	if err != nil {
-		fmt.Println(err)
 		return conn
 	}
 	return conn
 }
 
+func retryConnect(pool *pgxpool.Pool) (conn *pgxpool.Conn, err error) {
+	for i := 0; i < 4; i++ {
+		conn, err = pool.Acquire(context.Background())
+		if err != nil {
+			if i == 3 {
+				return nil, errors.Join(errNoConnect, err)
+			}
+			if strings.Contains(err.Error(), "failed to connect") {
+				fmt.Println("connect refused")
+			} else {
+				fmt.Println(err)
+			}
+			time.Sleep(time.Duration(constant.RetriTimmer[i]) * time.Second)
+			continue
+
+		}
+		return conn, nil
+	}
+	return nil, nil
+}
+
 func migrateTables(pool *pgxpool.Pool) error {
-	conn, err := pool.Acquire(context.Background())
-	fmt.Println("Alee")
+	conn, err := retryConnect(pool)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer conn.Release()
-	fmt.Println("Alee")
 	_, err = conn.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS gauges (
 		name VARCHAR(255) PRIMARY KEY,
 		value DOUBLE PRECISION
 	);
 	CREATE TABLE IF NOT EXISTS counters (
 		name VARCHAR(255) PRIMARY KEY,
-		value INTEGER
+		value bigint
 	);`)
-	fmt.Println("Alee")
 	return err
 }
 
@@ -76,6 +97,7 @@ func (p *Repository) Delete(typeMetric string, key string) error {
 func (p *Repository) Add(typeMetric string, key string, value string) error {
 	conn, err := p.db.Acquire(context.Background())
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer conn.Release()
@@ -87,6 +109,7 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 		}
 		if _, err := conn.Exec(context.Background(), `insert into gauges(name, value) values ($1, $2)
 		on conflict (name) do update set value=value + $2`, key, value); err == nil {
+			fmt.Println(err)
 			return nil
 		}
 	case "counter":
@@ -96,6 +119,8 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 		}
 		if _, err := conn.Exec(context.Background(), `insert into counters(name, value) values ($1, $2)
 		on conflict (name) do update set value=$2`, key, value); err == nil {
+			fmt.Println(err)
+
 			return nil
 		}
 	default:
@@ -106,7 +131,8 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 
 func (p *Repository) AddJSON(data model.Metrics) error {
 	conn, err := p.db.Acquire(context.Background())
-	if err != nil {
+	if err != nil && pgerrcode.IsConnectionException(err.Error()) {
+		fmt.Println(err)
 		return err
 	}
 	defer conn.Release()
@@ -118,37 +144,58 @@ func (p *Repository) AddJSON(data model.Metrics) error {
 		if err == nil {
 			return nil
 		}
-		fmt.Println(err)
 	case "counter":
-		fmt.Println(*data.Delta)
 		_, err := conn.Exec(context.Background(), `insert into counters(name, value) values ($1, $2)
 		on conflict (name) do update set value = counters.value + $2`, data.ID, data.Delta)
 		if err == nil {
 			return nil
 		}
-		fmt.Println(err)
 	default:
 		return errors.New("NotFound")
 	}
-	fmt.Println("ale")
 	return errors.New("NotFound")
 }
 
+func (p *Repository) AddMuiltJSON(data []model.Metrics) error {
+	conn, err := retryConnect(p.db)
+	if err != nil {
+		return err
+	}
+	batch := &pgx.Batch{}
+	defer conn.Release()
+	for _, i := range data {
+		switch i.MType {
+		case "gauge":
+			batch.Queue(`insert into gauges(name, value) values ($1, $2)
+			on conflict (name) do update set value=$2`, i.ID, i.Value)
+		case "counter":
+			batch.Queue(`insert into counters(name, value) values ($1, $2)
+			on conflict (name) do update set value = counters.value + $2`, i.ID, i.Delta)
+		}
+	}
+	br := conn.SendBatch(context.Background(), batch)
+	err = br.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
-	conn, err := p.db.Acquire(context.Background())
+	conn, err := retryConnect(p.db)
 	if err != nil {
 		return data, err
 	}
 	defer conn.Release()
 	switch data.MType {
 	case "gauge":
-		err := conn.QueryRow(context.Background(), "select value from gauges where name=$1", data.ID).Scan(data.Value)
+		err := conn.QueryRow(context.Background(), "select value from gauges where name=$1", data.ID).Scan(&data.Value)
 		if err != nil {
 			return data, errors.New("NotFound")
 		}
 		return data, nil
 	case "counter":
-		err := conn.QueryRow(context.Background(), "select value from counters where name=$1", data.ID).Scan(data.Delta)
+		err := conn.QueryRow(context.Background(), "select value from counters where name=$1", data.ID).Scan(&data.Delta)
 		if err != nil {
 			return data, errors.New("NotFound")
 		}
@@ -159,7 +206,7 @@ func (p *Repository) GetJSON(data model.Metrics) (model.Metrics, error) {
 }
 
 func (p *Repository) Get(typeMetric string, key string) (interface{}, error) {
-	conn, err := p.db.Acquire(context.Background())
+	conn, err := retryConnect(p.db)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +232,7 @@ func (p *Repository) Get(typeMetric string, key string) (interface{}, error) {
 }
 
 func (p *Repository) GetAll() []byte {
-	conn, err := p.db.Acquire(context.Background())
+	conn, err := retryConnect(p.db)
 	if err != nil {
 		return nil
 	}
@@ -193,8 +240,6 @@ func (p *Repository) GetAll() []byte {
 	resultData := []byte{}
 	rows, err := conn.Query(context.Background(), "select * from counters")
 	if err != nil {
-		fmt.Println(1)
-		fmt.Println(err)
 		return nil
 	}
 	for rows.Next() {
@@ -202,16 +247,12 @@ func (p *Repository) GetAll() []byte {
 		var value int32
 		err := rows.Scan(&name, &value)
 		if err != nil {
-			fmt.Println(2)
-			fmt.Println(err)
 			return nil
 		}
 		resultData = append(resultData, []byte(fmt.Sprintf("%v: %v\n", name, value))...)
 	}
 	rows, err = conn.Query(context.Background(), "select * from gauges")
 	if err != nil {
-		fmt.Println(3)
-		fmt.Println(err)
 		return nil
 	}
 	for rows.Next() {
@@ -219,8 +260,6 @@ func (p *Repository) GetAll() []byte {
 		var value float64
 		err := rows.Scan(&name, &value)
 		if err != nil {
-			fmt.Println(4)
-			fmt.Println(err)
 			return nil
 		}
 		resultData = append(resultData, []byte(fmt.Sprintf("%v: %v\n", name, value))...)

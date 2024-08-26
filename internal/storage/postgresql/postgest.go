@@ -10,7 +10,6 @@ import (
 
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/pkg/constant"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -95,9 +94,8 @@ func (p *Repository) Delete(typeMetric string, key string) error {
 }
 
 func (p *Repository) Add(typeMetric string, key string, value string) error {
-	conn, err := p.db.Acquire(context.Background())
+	conn, err := retryConnect(p.db)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer conn.Release()
@@ -109,7 +107,6 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 		}
 		if _, err := conn.Exec(context.Background(), `insert into gauges(name, value) values ($1, $2)
 		on conflict (name) do update set value=value + $2`, key, value); err == nil {
-			fmt.Println(err)
 			return nil
 		}
 	case "counter":
@@ -119,8 +116,6 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 		}
 		if _, err := conn.Exec(context.Background(), `insert into counters(name, value) values ($1, $2)
 		on conflict (name) do update set value=$2`, key, value); err == nil {
-			fmt.Println(err)
-
 			return nil
 		}
 	default:
@@ -130,9 +125,8 @@ func (p *Repository) Add(typeMetric string, key string, value string) error {
 }
 
 func (p *Repository) AddJSON(data model.Metrics) error {
-	conn, err := p.db.Acquire(context.Background())
-	if err != nil && pgerrcode.IsConnectionException(err.Error()) {
-		fmt.Println(err)
+	conn, err := retryConnect(p.db)
+	if err != nil {
 		return err
 	}
 	defer conn.Release()

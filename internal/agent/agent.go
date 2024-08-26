@@ -106,10 +106,11 @@ func (s *Collector) SendToServer(data []model.Metrics) error {
 			fmt.Printf("error: connection refused %e\n", err)
 			time.Sleep(time.Duration(constant.RetriTimmer[i]) * time.Second)
 		} else {
+			defer resp.Body.Close()
 			break
 		}
 	}
-	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}

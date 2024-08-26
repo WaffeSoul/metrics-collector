@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	noConnect = errors.New("no connect")
+	errNoConnect = errors.New("no connect")
 )
 
 type Repository struct {
@@ -51,7 +51,7 @@ func retryConnect(pool *pgxpool.Pool) (conn *pgxpool.Conn, err error) {
 		conn, err = pool.Acquire(context.Background())
 		if err != nil {
 			if i == 3 {
-				return nil, errors.Join(noConnect, err)
+				return nil, errors.Join(errNoConnect, err)
 			}
 			var pgErr *pgconn.PgError
 			if strings.Contains(err.Error(), "failed to connect") {

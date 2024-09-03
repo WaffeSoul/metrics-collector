@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"strconv"
+
+	"github.com/WaffeSoul/metrics-collector/internal/crypto"
 )
 
 var (
@@ -13,6 +15,7 @@ var (
 	fileStoragePath string
 	restore         bool
 	addrDB          string
+	keyHash         string
 )
 
 func parseFlags() {
@@ -20,6 +23,7 @@ func parseFlags() {
 	flag.StringVar(&addrDB, "d", "", "address and port to connect db")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 	flag.IntVar(&storeInterval, "i", 300, "interval save store")
+	flag.StringVar(&keyHash, "k", "", "key hash")
 	flag.StringVar(&fileStoragePath, "f", "/tmp/metrics-db.json", "path file storage")
 	flag.BoolVar(&restore, "r", true, "restore file storage")
 	flag.Parse()
@@ -40,7 +44,12 @@ func parseFlags() {
 	if envFileStoragePath := os.Getenv("FILE_STORAGE_PATH"); envFileStoragePath != "" {
 		fileStoragePath = envFileStoragePath
 	}
-
+	if envKeyHash := os.Getenv("KEY"); envKeyHash != "" {
+		keyHash = envKeyHash
+	}
+	if keyHash != "" {
+		crypto.Key = keyHash
+	}
 	if envRestore := os.Getenv("RESTORE"); envRestore != "" {
 		if envRestore == "true" {
 			restore = true

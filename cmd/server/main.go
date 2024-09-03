@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/WaffeSoul/metrics-collector/internal/crypto"
 	"github.com/WaffeSoul/metrics-collector/internal/handlers"
 	"github.com/WaffeSoul/metrics-collector/internal/logger"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
@@ -30,6 +31,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)
+	r.Use(crypto.HashMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetric(db))

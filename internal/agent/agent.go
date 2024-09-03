@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/WaffeSoul/metrics-collector/internal/crypto"
 	"github.com/WaffeSoul/metrics-collector/internal/model"
 	"github.com/WaffeSoul/metrics-collector/pkg/constant"
 )
@@ -26,6 +27,7 @@ type Collector struct {
 	counter        int64
 	pollInterval   int64
 	reportInterval int64
+	keyHash        string
 	fields         fields
 	mutex          sync.Mutex
 }
@@ -60,10 +62,11 @@ type fields struct {
 	TotalAlloc    float64
 }
 
-func NewCollector(address string, pollInterval int64, reportInterval int64) *Collector {
+func NewCollector(address string, pollInterval int64, reportInterval int64, key string) *Collector {
 	return &Collector{
 		address:        address,
 		counter:        0,
+		keyHash:        key,
 		pollInterval:   pollInterval,
 		reportInterval: reportInterval,
 		fields:         fields{},
@@ -81,6 +84,7 @@ func (s *Collector) SendToServer(data []model.Metrics) error {
 	}
 	postURL := "http://" + s.address + "/updates/"
 	var buf bytes.Buffer
+	hash := crypto.HashWithKey(dataBytes, s.keyHash)
 	g := gzip.NewWriter(&buf)
 	if _, err = g.Write(dataBytes); err != nil {
 		return fmt.Errorf("gzip compress %e", err)
@@ -95,6 +99,7 @@ func (s *Collector) SendToServer(data []model.Metrics) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("HashSHA256", hash)
 	var resp *http.Response
 	for i := 0; i < 4; i++ {
 		resp, err = newClient.Do(req)

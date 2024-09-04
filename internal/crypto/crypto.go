@@ -26,7 +26,7 @@ func VerifyHash(data []byte, key string, hash string) bool {
 func HashMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hash := r.Header.Get("HashSHA256")
-		if Key != "" {
+		if Key != "" && hash != "" {
 
 			body := &bytes.Buffer{}
 			io.Copy(body, r.Body)

@@ -32,6 +32,7 @@ func HashMiddleware(next http.Handler) http.Handler {
 			io.Copy(body, r.Body)
 
 			if !VerifyHash(body.Bytes(), Key, hash) {
+				w.Header().Add("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}

@@ -118,7 +118,7 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
+		fmt.Println(jsonResp)
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResp)
 	}

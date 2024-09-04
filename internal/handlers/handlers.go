@@ -101,6 +101,7 @@ func GetValueJSON(db *storage.Database) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		fmt.Println(resJSON)
 		if len(resJSON.ID) == 0 {
 			w.WriteHeader(http.StatusNotFound)
 			return

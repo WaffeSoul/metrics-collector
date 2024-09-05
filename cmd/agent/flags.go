@@ -12,6 +12,7 @@ type Config struct {
 	PollInterval   int64  `env:"POLL_INTERVAL"`
 	Addr           string `env:"ADDRESS"`
 	KeyHash        string `env:"KEY"`
+	Rate           int64  `env:"RATE_LIMIT"`
 }
 
 var cfg Config
@@ -20,10 +21,12 @@ func parseFlags() {
 	var addr string
 	var reportInterval int64
 	var pollInterval int64
+	var rate int64
 	var keyHash string
 	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&keyHash, "k", "", "key hash")
 	flag.Int64Var(&reportInterval, "r", 10, "report interval in seconds")
+	flag.Int64Var(&rate, "l", 1, "report interval in seconds")
 	flag.Int64Var(&pollInterval, "p", 2, "poll interval in seconds")
 	flag.Parse()
 	err := env.Parse(&cfg)
@@ -38,6 +41,9 @@ func parseFlags() {
 	}
 	if cfg.ReportInterval == 0 {
 		cfg.ReportInterval = reportInterval
+	}
+	if cfg.Rate == 0 {
+		cfg.Rate = rate
 	}
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = pollInterval

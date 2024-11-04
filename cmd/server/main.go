@@ -6,11 +6,14 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/WaffeSoul/metrics-collector/internal/crypto"
 	"github.com/WaffeSoul/metrics-collector/internal/handlers"
 	"github.com/WaffeSoul/metrics-collector/internal/logger"
 	"github.com/WaffeSoul/metrics-collector/internal/storage"
+
+	_ "net/http/pprof" // подключаем пакет pprof
 )
 
 func main() {
@@ -32,6 +35,7 @@ func main() {
 	r.Use(logger.WithLogging)
 	r.Use(handlers.GzipMiddleware)
 	r.Use(crypto.HashMiddleware)
+	r.Mount("/debug", middleware.Profiler())
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetAll(db))
 		r.Post("/update/{type}/{name}/{value}", handlers.PostMetric(db))
